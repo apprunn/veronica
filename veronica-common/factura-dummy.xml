@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<factura id="comprobante" version="1.0.0">
+    <infoTributaria>
+        <ambiente>1</ambiente>
+        <tipoEmision>1</tipoEmision>
+        <razonSocial>ROLANDOPALERMO CONSULTING CIA. LTDA.</razonSocial>
+        <nombreComercial>RP Consulting</nombreComercial>
+        <ruc>1791261151001</ruc>
+        <claveAcceso>1004201801179126115100110010010000001170000308514</claveAcceso>
+        <codDoc>01</codDoc>
+        <estab>001</estab>
+        <ptoEmi>001</ptoEmi>
+        <secuencial>000000117</secuencial>
+        <dirMatriz>Cdla. Urdesa Central - Calle Cedros #108 y Víctor Emilio Estrada</dirMatriz>
+    </infoTributaria>
+    <infoFactura>
+        <fechaEmision>10042018</fechaEmision>
+        <dirEstablecimiento>KM 2.5 Av. Juan Tanca Marengo S/N y Av. A. Freire</dirEstablecimiento>
+        <contribuyenteEspecial>000</contribuyenteEspecial>
+        <obligadoContabilidad>SI</obligadoContabilidad>
+        <tipoIdentificacionComprador>04</tipoIdentificacionComprador>
+        <razonSocialComprador>HIVIMAR S.A.</razonSocialComprador>
+        <identificacionComprador>0990129185001</identificacionComprador>
+        <totalSinImpuestos>6316.80</totalSinImpuestos>
+        <totalDescuento>0.00</totalDescuento>
+        <totalConImpuestos>
+            <totalImpuesto>
+                <codigo>2</codigo>
+                <codigoPorcentaje>2</codigoPorcentaje>
+                <baseImponible>6316.80</baseImponible>
+                <tarifa>12.00</tarifa>
+                <valor>758.02</valor>
+            </totalImpuesto>
+        </totalConImpuestos>
+        <propina>0.00</propina>
+        <importeTotal>7074.82</importeTotal>
+        <moneda>DOLAR</moneda>
+    </infoFactura>
+    <detalles>
+        <detalle>
+            <codigoPrincipal>001</codigoPrincipal>
+            <codigoAuxiliar>001</codigoAuxiliar>
+            <descripcion>SERVICIO DE CONSULTORÍA</descripcion>
+            <cantidad>1.00</cantidad>
+            <precioUnitario>6316.80</precioUnitario>
+            <descuento>0.00</descuento>
+            <precioTotalSinImpuesto>6316.80</precioTotalSinImpuesto>
+            <impuestos>
+                <impuesto>
+                    <codigo>2</codigo>
+                    <codigoPorcentaje>2</codigoPorcentaje>
+                    <tarifa>12.00</tarifa>
+                    <baseImponible>6316.80</baseImponible>
+                    <valor>758.02</valor>
+                </impuesto>
+            </impuestos>
+        </detalle>
+    </detalles>
+    <infoAdicional>
+        <campoAdicional nombre="Dirección">LOS PERALES Y AV. ELOY ALFARO</campoAdicional>
+        <campoAdicional nombre="Teléfono">2123123</campoAdicional>
+        <campoAdicional nombre="Email">gfeguiguren@sri.gob.ec</campoAdicional>
+    </infoAdicional>
+</factura>
