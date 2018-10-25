@@ -5,8 +5,8 @@
   <a href="blog.rolandopalermo.com" target="_blank"><img alt="PayPal Donate" src="https://img.shields.io/badge/plaform-windows%20%7C%20linux%20%7C%20macOS-blue.svg"></a>
   <a href="blog.rolandopalermo.com" target="_blank"><img alt="PayPal Donate" src="https://img.shields.io/badge/version-1.0.0-green.svg"></a>
 </p>
+<h4 align="center">E-Invoicing Rest API for the integration with "Servicio de Rentas Internas" Web services.</h4>
 <img src="https://raw.githubusercontent.com/rolandopalermo/Veronica/master/static/api-doc.jpg" alt="Markdownify" width="800">
-<h4>E-Invoicing Rest API for the integration with "Servicio de Rentas Internas" Web services.</h4>
 </h1>
 
 <!-- TOC depthFrom:1 depthTo:2 withLinks:1 updateOnSave:1 orderedList:0 -->
