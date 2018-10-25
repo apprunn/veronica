@@ -6,7 +6,9 @@
   <a href="blog.rolandopalermo.com" target="_blank"><img alt="PayPal Donate" src="https://img.shields.io/badge/version-1.0.0-green.svg"></a>
 </p>
 <h4 align="center">E-Invoicing Rest API for the integration with "Servicio de Rentas Internas" Web services.</h4>
-<img src="https://raw.githubusercontent.com/rolandopalermo/Veronica/master/static/api-doc.jpg" alt="Markdownify" width="800">
+<p align="center">
+  <img src="https://raw.githubusercontent.com/rolandopalermo/Veronica/master/static/api-doc.jpg" alt="Markdownify" width="800">
+</p>
 </h1>
 
 <!-- TOC depthFrom:1 depthTo:2 withLinks:1 updateOnSave:1 orderedList:0 -->
