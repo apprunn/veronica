@@ -113,7 +113,7 @@
 		</dependency>
 		<dependency>
 			<groupId>com.rolandopalermo.facturacion.ec</groupId>
-			<artifactId>facturacion-electronica-ec-dto</artifactId>
+			<artifactId>veronica-dto</artifactId>
 			<version>0.0.1-SNAPSHOT</version>
 		</dependency>
 	</dependencies>
