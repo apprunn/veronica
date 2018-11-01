@@ -26,11 +26,14 @@ import lombok.Setter;
 @Getter
 @Setter
 @XmlRootElement(name = "factura")
-@XmlType(propOrder = { "id", "version", "infoTributaria", "infoFactura", "detalle", "campoAdicional" })
+@XmlType(propOrder = { "id", "version", "infoTributaria", "infoFactura", "pago", "detalle", "campoAdicional" })
 public class Factura extends ComprobanteElectronico {
 
 	@Valid
 	protected InfoFactura infoFactura;
+	@NotEmpty
+	@Valid
+	private List<Pago> pago;
 	@NotEmpty
 	@Valid
 	private List<FacturaDetalle> detalle;
@@ -39,5 +42,8 @@ public class Factura extends ComprobanteElectronico {
 	public List<FacturaDetalle> getDetalle() {
 		return detalle;
 	}
+
+	@XmlElementWrapper(name = "pagos")
+	public List<Pago> getPago() { return pago; }
 
 }
