@@ -32,5 +32,6 @@ public class GuiaDetalles {
     protected String descripcion;
     protected BigDecimal cantidad;
     private List<DetAdicional> detAdicional;
+    
 
 }
