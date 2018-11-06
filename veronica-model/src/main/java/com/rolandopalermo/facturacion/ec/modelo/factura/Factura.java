@@ -7,7 +7,6 @@ package com.rolandopalermo.facturacion.ec.modelo.factura;
 import java.util.List;
 
 import javax.validation.Valid;
-//import javax.validation.constraints.NotNull;
 import javax.xml.bind.annotation.XmlElementWrapper;
 import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.XmlType;
