@@ -42,7 +42,7 @@ public class SaleDocumentBO {
             
             // Save sale document in storage
 
-            String directory = "saleDocuemnts/" + company.getRuc();
+            String directory = "saleDocuments/" + company.getRuc();
             String fileName = saleDocumentId + ".xml";
 
             // Crear directorios
