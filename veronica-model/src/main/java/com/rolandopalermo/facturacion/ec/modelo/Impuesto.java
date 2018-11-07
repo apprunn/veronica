@@ -8,7 +8,7 @@ import java.math.BigDecimal;
 
 import javax.xml.bind.annotation.XmlType;
 
-import org.hibernate.validator.constraints.NotEmpty;
+import javax.validation.constraints.NotEmpty;
 
 import lombok.Getter;
 import lombok.Setter;

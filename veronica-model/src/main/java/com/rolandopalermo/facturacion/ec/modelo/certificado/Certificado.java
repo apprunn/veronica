@@ -1,6 +1,6 @@
 package com.rolandopalermo.facturacion.ec.modelo.certificado;
 
-import org.hibernate.validator.constraints.NotEmpty;
+import javax.validation.constraints.NotEmpty;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -10,11 +10,18 @@ import lombok.Setter;
 public class Certificado {
 
     @NotEmpty
-    protected String certificado;
+    protected byte[] certificado;
     
     @NotEmpty 
     protected String clave;
 
     protected int companyId;
 
+    protected int branchId;
+
+    @NotEmpty
+    protected String companyName;
+
+    @NotEmpty
+    protected String ruc;
 }
