@@ -10,4 +10,6 @@ public interface SaleDocumentRepository extends CrudRepository<SaleDocument, Int
 
     List<SaleDocument> findByCompanyId(int companyId);
 
+    List<SaleDocument> findBySaleDocumentId(int saleDocumentId);
+
 }

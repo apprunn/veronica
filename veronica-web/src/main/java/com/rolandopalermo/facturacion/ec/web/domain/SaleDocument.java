@@ -27,6 +27,6 @@ public class SaleDocument {
     private String saleDocumentPath;
     private String saleDocumentCode;
     private int saleDocumentState;
-    private int version;
+    private int version = 1;
 
 }

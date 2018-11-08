@@ -19,7 +19,6 @@ import com.rolandopalermo.facturacion.ec.common.exception.BadRequestException;
 import com.rolandopalermo.facturacion.ec.common.exception.InternalServerException;
 import com.rolandopalermo.facturacion.ec.common.exception.NegocioException;
 import com.rolandopalermo.facturacion.ec.common.exception.ResourceNotFoundException;
-import com.rolandopalermo.facturacion.ec.dto.GenericResponse;
 import com.rolandopalermo.facturacion.ec.modelo.ComprobanteElectronico;
 import com.rolandopalermo.facturacion.ec.modelo.factura.Factura;
 import com.rolandopalermo.facturacion.ec.modelo.guia.GuiaRemision;
@@ -113,17 +112,11 @@ public class GeneracionController {
 		try {
 			byte[] content = generadorBO.generarXMLDocumentoElectronico(request);
 
-			List<Company> company = companyBO.getCompany(request.getInfoTributaria().getRuc());
+			Company company = companyBO.getCompany(request.getInfoTributaria().getRuc());
 
-			if (company.isEmpty()) {
-				throw new NegocioException("Compañia no registrada");
-			}
-	
-			Company comp = company.get(0);
+			byte[] signedContent = firmarComprobanteElectronico(content, company);
 
-			byte[] signedContent = firmarComprobanteElectronico(content, comp);
-
-			SaleDocument saleDocument = saleDocumentBO.saveSaleDocument(comp, saleDocumentId, signedContent);
+			SaleDocument saleDocument = saleDocumentBO.saveSaleDocument(company, saleDocumentId, content, signedContent);
 
 			// FIRMAR DOCUMENTO
 			return new ResponseEntity<SaleDocument>(saleDocument, HttpStatus.OK);

@@ -28,7 +28,7 @@ import io.swagger.annotations.ApiParam;
 
 @RestController
 @RequestMapping(value = "/api/v1/register")
-@Api(description = "Permite registrar compañia")
+@Api(description = "Controlador de compañias")
 public class RegisterCertificateController {
 
     private static final Logger logger = Logger.getLogger(RegisterCertificateController.class);
@@ -36,7 +36,7 @@ public class RegisterCertificateController {
     @Autowired
     private CompanyBO companyBO;
 
-    @ApiOperation(value = "Registra un certificado y clave de una respectiva compañia")
+    @ApiOperation(value = "Registra o actualiza una compañia")
     @PostMapping(value = "/company", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<GenericResponse<String>> registrarCompany(
         @Valid
@@ -54,13 +54,13 @@ public class RegisterCertificateController {
 
     @ApiOperation(value = "Obtener la compañia")
     @GetMapping(value = "/company", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<List<Company>> obtenerCompany(
+    public ResponseEntity<Company> obtenerCompany(
         @Valid
         @ApiParam(value = "ID de companñia")
         @RequestParam String ruc
     ) {
         try {
-            List<Company> company = companyBO.getCompany(ruc);
+            Company company = companyBO.getCompany(ruc);
             return new ResponseEntity<>(company, HttpStatus.OK);
         } catch (Exception e) {
             logger.error(e.getMessage());

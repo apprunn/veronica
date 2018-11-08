@@ -10,4 +10,4 @@ public interface CompanyRepository extends CrudRepository<Company, Integer> {
 
     List<Company> findByRuc(String ruc);
 
-}
+} 

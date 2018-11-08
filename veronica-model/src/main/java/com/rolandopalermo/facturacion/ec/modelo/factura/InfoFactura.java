@@ -25,7 +25,7 @@ import lombok.Setter;
 @Setter
 @XmlType(propOrder = { "fechaEmision", "dirEstablecimiento", "contribuyenteEspecial", "obligadoContabilidad",
 		"tipoIdentificacionComprador", "guiaRemision", "razonSocialComprador", "identificacionComprador",
-		"totalSinImpuestos", "totalDescuento", "totalImpuesto", "propina", "importeTotal", "moneda", /* "pagos", */
+		"totalSinImpuestos", "totalDescuento", "totalImpuesto", "propina", "importeTotal", "moneda", "pago",
 		"valorRetIva", "valorRetRenta" })
 public class InfoFactura {
 
@@ -51,9 +51,9 @@ public class InfoFactura {
 	@NotNull
 	protected BigDecimal importeTotal;
 	protected String moneda;
-	// @NotEmpty
-	// @Valid
-	// private List<Pago> pagos;
+	@NotEmpty
+	@Valid
+	private List<Pago> pago;
 	private BigDecimal valorRetIva;
 	private BigDecimal valorRetRenta;
 
@@ -62,9 +62,9 @@ public class InfoFactura {
 		return totalImpuesto;
 	}
 
-	// @XmlElementWrapper(name = "pagos")
-	// public List<Pago> getPagos() {
-	// return pagos;
-	// }
+	@XmlElementWrapper(name = "pagos")
+	public List<Pago> getPago() {
+	return pago;
+	}
 
 }

@@ -24,12 +24,17 @@ import com.rolandopalermo.facturacion.ec.common.exception.NegocioException;
 import com.rolandopalermo.facturacion.ec.common.exception.ResourceNotFoundException;
 import com.rolandopalermo.facturacion.ec.dto.AutorizacionRequestDTO;
 import com.rolandopalermo.facturacion.ec.dto.RecepcionRequestDTO;
+import com.rolandopalermo.facturacion.ec.dto.ReceptionStorageDTO;
 import com.rolandopalermo.facturacion.ec.modelo.ComprobanteElectronico;
 import com.rolandopalermo.facturacion.ec.modelo.factura.Factura;
 import com.rolandopalermo.facturacion.ec.modelo.guia.GuiaRemision;
 import com.rolandopalermo.facturacion.ec.modelo.notacredito.NotaCredito;
 import com.rolandopalermo.facturacion.ec.modelo.notadebito.NotaDebito;
 import com.rolandopalermo.facturacion.ec.modelo.retencion.ComprobanteRetencion;
+import com.rolandopalermo.facturacion.ec.web.bo.CompanyBO;
+import com.rolandopalermo.facturacion.ec.web.bo.SaleDocumentBO;
+import com.rolandopalermo.facturacion.ec.web.domain.Company;
+import com.rolandopalermo.facturacion.ec.web.domain.SaleDocument;
 
 import autorizacion.ws.sri.gob.ec.RespuestaComprobante;
 import io.swagger.annotations.Api;
@@ -46,6 +51,9 @@ public class SRIController {
 
 	@Autowired
 	private SriBO sriBO;
+
+	@Autowired 
+	SaleDocumentBO saleDocumentBO;
 
 	@Value("${pkcs12.certificado.ruta}")
 	private String rutaArchivoPkcs12;
@@ -70,6 +78,26 @@ public class SRIController {
 		try {
 			return new ResponseEntity<RespuestaSolicitud>(
 					sriBO.enviarComprobante(request.getContenido(), wsdlRecepcion), HttpStatus.OK);
+		} catch (NegocioException e) {
+			logger.error("enviarComprobante", e);
+			throw new BadRequestException(e.getMessage());
+		} catch (Exception e) {
+			logger.error("enviarComprobante", e);
+			throw new InternalServerException(e.getMessage());
+		}
+	}
+
+	@ApiOperation(value = "Envía un comprobante electronico almacenado a validar al SRI")
+	@PostMapping(value = "/enviar-storage", produces = MediaType.APPLICATION_JSON_VALUE)
+	public ResponseEntity<RespuestaSolicitud> enviarComprobanteAlmacenado(
+		@ApiParam(value = "Parametros de compañia y comprobante electronico", required = true)
+		@RequestBody ReceptionStorageDTO request) {
+
+		try {
+			SaleDocument saleDocument = saleDocumentBO.getSaleDocumentByDocumentId(request.getSaleDocumentId());
+			byte [] contenido = saleDocumentBO.getSaleDocumentFile(saleDocument.getSaleDocumentPath());
+			return new ResponseEntity<RespuestaSolicitud>(
+					sriBO.enviarComprobante(contenido, wsdlRecepcion), HttpStatus.OK);
 		} catch (NegocioException e) {
 			logger.error("enviarComprobante", e);
 			throw new BadRequestException(e.getMessage());
