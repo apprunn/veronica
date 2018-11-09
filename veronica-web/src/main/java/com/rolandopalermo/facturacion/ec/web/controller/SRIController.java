@@ -3,6 +3,9 @@ package com.rolandopalermo.facturacion.ec.web.controller;
 import static com.rolandopalermo.facturacion.ec.common.util.Constantes.API_DOC_ANEXO_1;
 
 import java.io.File;
+import java.nio.file.Files;
+import java.util.Base64;
+import java.util.UUID;
 
 import javax.validation.Valid;
 
@@ -22,6 +25,7 @@ import com.rolandopalermo.facturacion.ec.common.exception.BadRequestException;
 import com.rolandopalermo.facturacion.ec.common.exception.InternalServerException;
 import com.rolandopalermo.facturacion.ec.common.exception.NegocioException;
 import com.rolandopalermo.facturacion.ec.common.exception.ResourceNotFoundException;
+import com.rolandopalermo.facturacion.ec.common.util.MarshallerUtil;
 import com.rolandopalermo.facturacion.ec.dto.AutorizacionRequestDTO;
 import com.rolandopalermo.facturacion.ec.dto.RecepcionRequestDTO;
 import com.rolandopalermo.facturacion.ec.dto.ReceptionStorageDTO;
@@ -40,6 +44,8 @@ import autorizacion.ws.sri.gob.ec.RespuestaComprobante;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import io.swagger.annotations.ApiParam;
+import recepcion.ws.sri.gob.ec.Comprobante;
+import recepcion.ws.sri.gob.ec.Mensaje;
 import recepcion.ws.sri.gob.ec.RespuestaSolicitud;
 
 @RestController
@@ -87,17 +93,45 @@ public class SRIController {
 		}
 	}
 
-	@ApiOperation(value = "Envía un comprobante electronico almacenado a validar al SRI")
+	@ApiOperation(value = "Envía un comprobante electronico almacenado a validar al SRI y lo autoriza")
 	@PostMapping(value = "/enviar-storage", produces = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<RespuestaSolicitud> enviarComprobanteAlmacenado(
 		@ApiParam(value = "Parametros de compañia y comprobante electronico", required = true)
 		@RequestBody ReceptionStorageDTO request) {
 
 		try {
-			SaleDocument saleDocument = saleDocumentBO.getSaleDocumentByDocumentId(request.getSaleDocumentId());
-			byte [] contenido = saleDocumentBO.getSaleDocumentFile(saleDocument.getSaleDocumentPath());
-			return new ResponseEntity<RespuestaSolicitud>(
-					sriBO.enviarComprobante(contenido, wsdlRecepcion), HttpStatus.OK);
+			SaleDocument saleDocument = saleDocumentBO.getLastSaleDocumentByDocumentId(request.getSaleDocumentId());
+
+			switch (saleDocument.getSaleDocumentState()) {
+				case SaleDocument.INCORRECTO:
+				throw new NegocioException("El documento es incorrecto, subir uno nuevo");
+				case SaleDocument.ENVIADO:
+				throw new NegocioException("El documento ya fue enviado");
+				case SaleDocument.AUTORIZADO:
+				throw new NegocioException("El documento ya fue autorizado");
+			}
+			
+			byte [] contenido = saleDocument.getXml();
+			
+			RespuestaSolicitud respuestaSolicitud = sriBO.enviarComprobante(contenido, wsdlRecepcion);
+			
+			String estado = respuestaSolicitud.getEstado();
+			if (estado.equals("DEVUELTA")) {
+				String message = estado + ":\n";
+				for (Mensaje mensaje : respuestaSolicitud.getComprobantes().getComprobante().get(0).getMensajes().getMensaje()) {
+					message += mensaje.getMensaje() + "\n";
+				}
+
+				saleDocument.setSaleDocumentState(SaleDocument.INCORRECTO);
+				saleDocumentBO.updateSaleDocument(saleDocument);
+
+				throw new NegocioException(message);
+			}
+
+			saleDocument.setSaleDocumentState(SaleDocument.ENVIADO);
+			saleDocumentBO.updateSaleDocument(saleDocument);
+
+			return new ResponseEntity<RespuestaSolicitud>(respuestaSolicitud, HttpStatus.OK);
 		} catch (NegocioException e) {
 			logger.error("enviarComprobante", e);
 			throw new BadRequestException(e.getMessage());
@@ -113,8 +147,17 @@ public class SRIController {
 			@ApiParam(value = "Clave de acceso del comprobante electrónico", required = true) 
 			@RequestBody AutorizacionRequestDTO request) {
 		try {
+
+			RespuestaComprobante respuestaComprobante = sriBO.autorizarComprobante(request.getClaveAcceso(), wsdlAutorizacion);
+			
+			// String rutaArchivoXML = UUID.randomUUID().toString();
+			// File temp = File.createTempFile(rutaArchivoXML, ".xml");
+			// rutaArchivoXML = temp.getAbsolutePath();
+			// // Actividad 2.- Ejecutar Marshalling
+			// MarshallerUtil.marshall(respuestaComprobante, rutaArchivoXML);
+
 			return new ResponseEntity<RespuestaComprobante>(
-					sriBO.autorizarComprobante(request.getClaveAcceso(), wsdlAutorizacion), HttpStatus.OK);
+				respuestaComprobante, HttpStatus.OK);
 		} catch (NegocioException e) {
 			logger.error("autorizarComprobante", e);
 			throw new BadRequestException(e.getMessage());

@@ -12,4 +12,6 @@ public interface SaleDocumentRepository extends CrudRepository<SaleDocument, Int
 
     List<SaleDocument> findBySaleDocumentId(int saleDocumentId);
 
+    SaleDocument findTopBySaleDocumentIdOrderByVersionDesc(int saleDocumentId);
+
 }
