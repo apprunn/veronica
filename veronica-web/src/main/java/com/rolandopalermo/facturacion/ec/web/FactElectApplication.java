@@ -1,5 +1,7 @@
 package com.rolandopalermo.facturacion.ec.web;
 
+import com.rolandopalermo.facturacion.ec.config.SQSServiceConfig;
+
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.ComponentScan;
@@ -11,7 +13,10 @@ import org.springframework.context.annotation.PropertySource;
 public class FactElectApplication {
 
 	public static void main(String[] args) {
+
+		SQSServiceConfig.getInstance();
 		SpringApplication.run(FactElectApplication.class, args);
+
 	}
 
 }

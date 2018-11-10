@@ -13,12 +13,14 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.google.gson.Gson;
 import com.rolandopalermo.facturacion.ec.bo.FirmadorBO;
 import com.rolandopalermo.facturacion.ec.bo.GeneradorBO;
 import com.rolandopalermo.facturacion.ec.common.exception.BadRequestException;
 import com.rolandopalermo.facturacion.ec.common.exception.InternalServerException;
 import com.rolandopalermo.facturacion.ec.common.exception.NegocioException;
 import com.rolandopalermo.facturacion.ec.common.exception.ResourceNotFoundException;
+import com.rolandopalermo.facturacion.ec.config.SQSServiceConfig;
 import com.rolandopalermo.facturacion.ec.modelo.ComprobanteElectronico;
 import com.rolandopalermo.facturacion.ec.modelo.factura.Factura;
 import com.rolandopalermo.facturacion.ec.modelo.guia.GuiaRemision;
@@ -37,11 +39,13 @@ import io.swagger.annotations.ApiParam;
 import static com.rolandopalermo.facturacion.ec.common.util.Constantes.*;
 
 import java.io.File;
+import java.util.HashMap;
+import java.util.Map;
 
 @RestController
-@RequestMapping(value = "/api/v1/generar")
-@Api(description = "Genera y firmar comprobante electrónico como XML")
-public class GeneracionController {
+@RequestMapping(value = "/api/v1/register")
+@Api(description = "Genera comprobante electrónico como XML, firma XML y encola envio de comprobante a la SRI")
+public class RegistroComprobanteController {
 
 	private static final Logger logger = Logger.getLogger(GeneracionController.class);
 
@@ -57,7 +61,7 @@ public class GeneracionController {
 	@Autowired
 	private SaleDocumentBO saleDocumentBO;
 
-	@ApiOperation(value = "Genera y firmar una factura en formato XML")
+	@ApiOperation(value = "Genera,firmar y encola envio de factura en formato XML")
 	@PostMapping(value = "/factura", produces = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<SaleDocument> generarFactura(
 			@Valid
@@ -68,7 +72,7 @@ public class GeneracionController {
 		return generarDocumentoElectronico(request, saleDocumentId, "FAC", override);
 	}
 
-	@ApiOperation(value = "Genera y firmar una guía de remisión en formato XML")
+	@ApiOperation(value = "Genera,firmar y encola envio de  guía de remisión en formato XML")
 	@PostMapping(value = "/guia-remision", produces = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<SaleDocument> generarGuiaRemision(
 			@Valid
@@ -79,7 +83,7 @@ public class GeneracionController {
 		return generarDocumentoElectronico(request, saleDocumentId, "REM", override);
 	}
 
-	@ApiOperation(value = "Genera y firmar una nota de crédito en formato XML")
+	@ApiOperation(value = "Genera,firmar y encola envio de  nota de crédito en formato XML")
 	@PostMapping(value = "/nota-credito", produces = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<SaleDocument> generarNotaCredito(
 			@Valid
@@ -90,7 +94,7 @@ public class GeneracionController {
 		return generarDocumentoElectronico(request, saleDocumentId, "CRE", override);
 	}
 
-	@ApiOperation(value = "Genera y firmar una nota de débito en formato XML")
+	@ApiOperation(value = "Genera,firmar y encola envio de  nota de débito en formato XML")
 	@PostMapping(value = "/nota-debito", produces = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<SaleDocument> generarNotaDebito(
 			@Valid
@@ -101,7 +105,7 @@ public class GeneracionController {
 		return generarDocumentoElectronico(request, saleDocumentId, "DEB", override);
 	}
 
-	@ApiOperation(value = "Genera y firmar un comprobante de retención en formato XML")
+	@ApiOperation(value = "Genera,firmar y encola envio de n comprobante de retención en formato XML")
 	@PostMapping(value = "/comprobante-retencion", produces = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<SaleDocument> generarComprobanteRetencion(
 			@Valid
@@ -122,7 +126,20 @@ public class GeneracionController {
 
 			SaleDocument saleDocument = saleDocumentBO.saveSaleDocument(company, request.getInfoTributaria().getClaveAcceso(), saleDocumentId, documentCode, content, signedContent, override);
 
-			// FIRMAR DOCUMENTO
+			SQSServiceConfig sqsServiceConfig = SQSServiceConfig.getInstance();
+
+			Map<String, String> message = new HashMap<>();
+
+			message.put("ruc", company.getRuc());
+			message.put("saleDocumentId", String.valueOf(saleDocumentId));
+
+			String messageGroupId = String.format("group_%d_#d", company.getCompanyId(), saleDocument.getSaleDocumentId());
+
+			Gson gson = new Gson();
+			String strMessage = gson.toJson(message);
+
+			sqsServiceConfig.sendMessage(strMessage, messageGroupId);
+
 			return new ResponseEntity<SaleDocument>(saleDocument, HttpStatus.OK);
 		} catch (NegocioException e) {
 			logger.error("generarDocumentoElectronico", e);

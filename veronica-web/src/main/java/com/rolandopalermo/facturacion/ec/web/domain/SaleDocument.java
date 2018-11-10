@@ -28,6 +28,7 @@ public class SaleDocument {
     public static final int ENVIADO = 2;
     public static final int AUTORIZADO = 3;
     public static final int INCORRECTO = 4;
+    public static final int NO_AUTORIZADO = 5;
     
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
@@ -42,6 +43,8 @@ public class SaleDocument {
     @NotNull
     private String saleDocumentPath;
     private String saleDocumentCode;
+    @NotNull
+    private String claveAcceso;
 
     /*
     1 -> Pendiente

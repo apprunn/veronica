@@ -3,11 +3,12 @@ package com.rolandopalermo.facturacion.ec.web.controller;
 import static com.rolandopalermo.facturacion.ec.common.util.Constantes.API_DOC_ANEXO_1;
 
 import java.io.File;
-import java.nio.file.Files;
+import java.io.StringWriter;
 import java.util.Base64;
-import java.util.UUID;
 
 import javax.validation.Valid;
+import javax.xml.bind.JAXBContext;
+import javax.xml.bind.Marshaller;
 
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,7 +26,7 @@ import com.rolandopalermo.facturacion.ec.common.exception.BadRequestException;
 import com.rolandopalermo.facturacion.ec.common.exception.InternalServerException;
 import com.rolandopalermo.facturacion.ec.common.exception.NegocioException;
 import com.rolandopalermo.facturacion.ec.common.exception.ResourceNotFoundException;
-import com.rolandopalermo.facturacion.ec.common.util.MarshallerUtil;
+import com.rolandopalermo.facturacion.ec.config.SQSServiceConfig;
 import com.rolandopalermo.facturacion.ec.dto.AutorizacionRequestDTO;
 import com.rolandopalermo.facturacion.ec.dto.RecepcionRequestDTO;
 import com.rolandopalermo.facturacion.ec.dto.ReceptionStorageDTO;
@@ -35,16 +36,15 @@ import com.rolandopalermo.facturacion.ec.modelo.guia.GuiaRemision;
 import com.rolandopalermo.facturacion.ec.modelo.notacredito.NotaCredito;
 import com.rolandopalermo.facturacion.ec.modelo.notadebito.NotaDebito;
 import com.rolandopalermo.facturacion.ec.modelo.retencion.ComprobanteRetencion;
-import com.rolandopalermo.facturacion.ec.web.bo.CompanyBO;
 import com.rolandopalermo.facturacion.ec.web.bo.SaleDocumentBO;
-import com.rolandopalermo.facturacion.ec.web.domain.Company;
 import com.rolandopalermo.facturacion.ec.web.domain.SaleDocument;
 
+import autorizacion.ws.sri.gob.ec.Autorizacion;
+import autorizacion.ws.sri.gob.ec.AutorizacionComprobanteResponse;
 import autorizacion.ws.sri.gob.ec.RespuestaComprobante;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import io.swagger.annotations.ApiParam;
-import recepcion.ws.sri.gob.ec.Comprobante;
 import recepcion.ws.sri.gob.ec.Mensaje;
 import recepcion.ws.sri.gob.ec.RespuestaSolicitud;
 
@@ -72,6 +72,9 @@ public class SRIController {
 
 	@Value("${sri.wsdl.autorizacion}")
 	private String wsdlAutorizacion;
+
+	@Value("${sales.ruta}")
+    private String baseURL;
 
 	@ApiOperation(value = "Envía un comprobante electrónico a validar al SRI")
 	@PostMapping(value = "/enviar", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -148,13 +151,48 @@ public class SRIController {
 			@RequestBody AutorizacionRequestDTO request) {
 		try {
 
+			SaleDocument saleDocument = saleDocumentBO.getLastSaleDocumentByClaveAcceso(request.getClaveAcceso());
+
+			if (saleDocument == null) {
+				throw new NegocioException("No hay documento registrado");
+			} 
+
 			RespuestaComprobante respuestaComprobante = sriBO.autorizarComprobante(request.getClaveAcceso(), wsdlAutorizacion);
 			
-			// String rutaArchivoXML = UUID.randomUUID().toString();
-			// File temp = File.createTempFile(rutaArchivoXML, ".xml");
-			// rutaArchivoXML = temp.getAbsolutePath();
-			// // Actividad 2.- Ejecutar Marshalling
-			// MarshallerUtil.marshall(respuestaComprobante, rutaArchivoXML);
+			if (saleDocument.getSaleDocumentState() == SaleDocument.AUTORIZADO) {
+				return new ResponseEntity<RespuestaComprobante>(
+					respuestaComprobante, HttpStatus.OK);
+			}
+
+
+			if (!respuestaComprobante.getNumeroComprobantes().equals("0")) {
+				Autorizacion autorizacion =  respuestaComprobante.getAutorizaciones().getAutorizacion().get(0);
+				String estado = autorizacion.getEstado();
+				if (estado.equals("AUTORIZADO")) {
+					saleDocument.setSaleDocumentState(SaleDocument.AUTORIZADO);
+
+					StringWriter sw = new StringWriter();
+					JAXBContext jaxbContext = JAXBContext.newInstance(AutorizacionComprobanteResponse.class);
+					Marshaller jaxbMarshaller = jaxbContext.createMarshaller();
+					AutorizacionComprobanteResponse au = new AutorizacionComprobanteResponse();
+					au.setRespuestaAutorizacionComprobante(respuestaComprobante);
+					jaxbMarshaller.marshal(au, sw);
+					String xmlString = sw.toString();
+					xmlString = xmlString.replace("&lt;", "<").replace("&gt;", ">;");
+					byte [] data = xmlString.getBytes("utf-8");
+
+					saleDocument.setXml(data);
+
+					// TODO: ENVIAR AL S3
+
+				} else {
+					saleDocument.setSaleDocumentState(SaleDocument.NO_AUTORIZADO);
+				}
+			} else {
+				saleDocument.setSaleDocumentState(SaleDocument.INCORRECTO);
+			}
+
+			saleDocumentBO.updateSaleDocument(saleDocument);
 
 			return new ResponseEntity<RespuestaComprobante>(
 				respuestaComprobante, HttpStatus.OK);

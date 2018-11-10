@@ -41,6 +41,16 @@ public class SaleDocumentBO {
         }
     }
 
+    public SaleDocument getLastSaleDocumentByClaveAcceso(String claveAcceso) throws NegocioException {
+        try {
+            return saleDocumentRepository.findTopByClaveAccesoOrderByVersionDesc(claveAcceso);
+        } catch (IndexOutOfBoundsException e) {
+            throw new NegocioException("Comprobante electronico no registrado");
+        } catch (Exception e) {
+            throw new NegocioException(e.getMessage());
+        }
+    }
+
     public List<SaleDocument> getSaleDocumentByCompany(int id) throws NegocioException {
         try {
             return saleDocumentRepository.findByCompanyId(id);
@@ -66,7 +76,14 @@ public class SaleDocumentBO {
         }
     }
 
-    public SaleDocument saveSaleDocument(Company company, int saleDocumentId, String documentCode, byte [] saleXML, byte [] saleSignedXml, boolean override) throws NegocioException {
+    public SaleDocument saveSaleDocument(
+        Company company, 
+        String claveAcceso,
+        int saleDocumentId, 
+        String documentCode, 
+        byte [] saleXML, 
+        byte [] saleSignedXml, 
+        boolean override) throws NegocioException {
         try {
 
             SaleDocument result = saleDocumentRepository.findTopBySaleDocumentIdOrderByVersionDesc(saleDocumentId);
@@ -117,6 +134,7 @@ public class SaleDocumentBO {
             saleDocument.setSaleDocumentId(saleDocumentId);
             saleDocument.setSaleDocumentCode(documentCode);
             saleDocument.setXml(saleSignedXml);
+            saleDocument.setClaveAcceso(claveAcceso);
             
             return saleDocumentRepository.save(saleDocument);
 

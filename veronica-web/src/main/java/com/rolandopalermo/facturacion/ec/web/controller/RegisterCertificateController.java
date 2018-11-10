@@ -1,7 +1,5 @@
 package com.rolandopalermo.facturacion.ec.web.controller;
 
-import java.util.List;
-
 import javax.validation.Valid;
 
 import com.rolandopalermo.facturacion.ec.common.exception.InternalServerException;
