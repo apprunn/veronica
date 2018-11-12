@@ -22,9 +22,9 @@ public class SQSServiceConfig {
 
     private AmazonSQS sqs = null;
 
-    protected SQSServiceConfig() {
-        init();
-    }
+    private String queueUrl;
+
+    protected SQSServiceConfig() { }
 
     public static SQSServiceConfig getInstance() {
         if (instance == null) {
@@ -34,8 +34,9 @@ public class SQSServiceConfig {
         return instance;
     }
  
-    private void init() {
+    public void initialize() {
         ProfileCredentialsProvider credentialsProvider = new ProfileCredentialsProvider();
+
 		try {
 			credentialsProvider.getCredentials();
 		} catch (Exception e) {
@@ -44,45 +45,60 @@ public class SQSServiceConfig {
                     "Please make sure that your credentials file is at the correct " +
                     "location (~/.aws/credentials), and is in valid format.",
                     e);
-		}
+        }
 
 		sqs = AmazonSQSClientBuilder.standard()
 							.withCredentials(credentialsProvider)
 							.withRegion(Regions.US_EAST_1)
-							.build();
+                            .build();
+                            
+
+        queueUrl = sqs.getQueueUrl("sri-dev.fifo").getQueueUrl();
     }
 
     public void sendMessage(String message, String messageGroupId) {
-
-        String queueUrl = sqs.getQueueUrl("sri-dev.fifo").getQueueUrl();
 
         SendMessageRequest sendMessageRequest = new SendMessageRequest(queueUrl, message);
         sendMessageRequest.setMessageGroupId(messageGroupId);
         sendMessageRequest.setMessageDeduplicationId(messageGroupId + ".fifo");
         sqs.sendMessage(sendMessageRequest);
 
+        // LOG
+        receiveMessage(true);
+
+    }
+
+    private List<Message> receiveMessage(boolean log) {
+
         // Receive messages
         System.out.println("Receiving messages from MyQueue.\n");
         ReceiveMessageRequest receiveMessageRequest = new ReceiveMessageRequest(queueUrl);
         List<Message> messages = sqs.receiveMessage(receiveMessageRequest).getMessages();
-        for (Message m : messages) {
-            System.out.println("  Message");
-            System.out.println("    MessageId:     " + m.getMessageId());
-            System.out.println("    ReceiptHandle: " + m.getReceiptHandle());
-            System.out.println("    MD5OfBody:     " + m.getMD5OfBody());
-            System.out.println("    Body:          " + m.getBody());
-            for (Entry<String, String> entry : m.getAttributes().entrySet()) {
-                System.out.println("  Attribute");
-                System.out.println("    Name:  " + entry.getKey());
-                System.out.println("    Value: " + entry.getValue());
+
+        if (log) {
+            for (Message m : messages) {
+                System.out.println("  Message");
+                System.out.println("    MessageId:     " + m.getMessageId());
+                System.out.println("    ReceiptHandle: " + m.getReceiptHandle());
+                System.out.println("    MD5OfBody:     " + m.getMD5OfBody());
+                System.out.println("    Body:          " + m.getBody());
+                for (Entry<String, String> entry : m.getAttributes().entrySet()) {
+                    System.out.println("  Attribute");
+                    System.out.println("    Name:  " + entry.getKey());
+                    System.out.println("    Value: " + entry.getValue());
+                }
             }
+            System.out.println();
         }
-        System.out.println();
+        return messages;
+    }
+
+    public void deleteMessage(String messageReceiptHandle) {
 
         // // Delete a message
-        // System.out.println("Deleting a message.\n");
-        // String messageReceiptHandle = messages.get(0).getReceiptHandle();
-        // sqs.deleteMessage(new DeleteMessageRequest(queueUrl, messageReceiptHandle));
+        System.out.println("Deleting a message.\n");
+        sqs.deleteMessage(new DeleteMessageRequest(queueUrl, messageReceiptHandle));
+
     }
 
 }

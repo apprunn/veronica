@@ -55,8 +55,10 @@ public class SaleDocument {
     private int saleDocumentState = PENDIENTE;
     private int version;
 
-    @Lob
-    @Basic(fetch = FetchType.LAZY)
-    private byte [] xml;
+    private String s3File;
+
+    // @Lob
+    // @Basic(fetch = FetchType.LAZY)
+    // private byte [] xml;
 
 }

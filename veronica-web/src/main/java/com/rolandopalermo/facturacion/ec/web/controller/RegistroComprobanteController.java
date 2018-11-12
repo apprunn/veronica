@@ -138,7 +138,7 @@ public class RegistroComprobanteController {
 			Gson gson = new Gson();
 			String strMessage = gson.toJson(message);
 
-			sqsServiceConfig.sendMessage(strMessage, messageGroupId);
+			// sqsServiceConfig.sendMessage(strMessage, messageGroupId);
 
 			return new ResponseEntity<SaleDocument>(saleDocument, HttpStatus.OK);
 		} catch (NegocioException e) {

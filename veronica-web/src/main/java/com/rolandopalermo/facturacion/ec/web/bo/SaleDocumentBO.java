@@ -7,6 +7,7 @@ import java.nio.file.Files;
 import java.util.List;
 
 import com.rolandopalermo.facturacion.ec.common.exception.NegocioException;
+import com.rolandopalermo.facturacion.ec.manager.S3Manager;
 import com.rolandopalermo.facturacion.ec.web.domain.Company;
 import com.rolandopalermo.facturacion.ec.web.domain.SaleDocument;
 import com.rolandopalermo.facturacion.ec.web.repositories.SaleDocumentRepository;
@@ -71,6 +72,9 @@ public class SaleDocumentBO {
     public SaleDocument updateSaleDocument(SaleDocument saleDocument) throws NegocioException {
         try {
             return saleDocumentRepository.save(saleDocument);
+
+            // Call sala docuemnt update state
+
         } catch (Exception e) {
             throw new NegocioException(e.getMessage());
         }
@@ -133,9 +137,14 @@ public class SaleDocumentBO {
             saleDocument.setSaleDocumentPath(pathSigned);
             saleDocument.setSaleDocumentId(saleDocumentId);
             saleDocument.setSaleDocumentCode(documentCode);
-            saleDocument.setXml(saleSignedXml);
+            // saleDocument.setXml(saleSignedXml);
             saleDocument.setClaveAcceso(claveAcceso);
-            
+
+            String nameXml = S3Manager.getInstance().uploadFile(saleSignedXml);
+            System.out.println(nameXml);
+
+            saleDocument.setS3File(nameXml);
+
             return saleDocumentRepository.save(saleDocument);
 
         } catch (Exception e) {

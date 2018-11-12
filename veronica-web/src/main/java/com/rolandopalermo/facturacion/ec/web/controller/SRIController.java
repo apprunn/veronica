@@ -30,6 +30,7 @@ import com.rolandopalermo.facturacion.ec.config.SQSServiceConfig;
 import com.rolandopalermo.facturacion.ec.dto.AutorizacionRequestDTO;
 import com.rolandopalermo.facturacion.ec.dto.RecepcionRequestDTO;
 import com.rolandopalermo.facturacion.ec.dto.ReceptionStorageDTO;
+import com.rolandopalermo.facturacion.ec.manager.S3Manager;
 import com.rolandopalermo.facturacion.ec.modelo.ComprobanteElectronico;
 import com.rolandopalermo.facturacion.ec.modelo.factura.Factura;
 import com.rolandopalermo.facturacion.ec.modelo.guia.GuiaRemision;
@@ -114,7 +115,7 @@ public class SRIController {
 				throw new NegocioException("El documento ya fue autorizado");
 			}
 			
-			byte [] contenido = saleDocument.getXml();
+			byte [] contenido = S3Manager.getInstance().downloadFile(saleDocument.getS3File());
 			
 			RespuestaSolicitud respuestaSolicitud = sriBO.enviarComprobante(contenido, wsdlRecepcion);
 			
@@ -178,12 +179,12 @@ public class SRIController {
 					au.setRespuestaAutorizacionComprobante(respuestaComprobante);
 					jaxbMarshaller.marshal(au, sw);
 					String xmlString = sw.toString();
-					xmlString = xmlString.replace("&lt;", "<").replace("&gt;", ">;");
+					xmlString = xmlString.replace("&lt;", "<").replace("&gt;", ">").replace("<?xml version=\"1.0\" encoding=\"UTF-8\"?>", "");
 					byte [] data = xmlString.getBytes("utf-8");
 
-					saleDocument.setXml(data);
-
 					// TODO: ENVIAR AL S3
+					String name = S3Manager.getInstance().uploadFile(data);
+					saleDocument.setS3File(name);
 
 				} else {
 					saleDocument.setSaleDocumentState(SaleDocument.NO_AUTORIZADO);
