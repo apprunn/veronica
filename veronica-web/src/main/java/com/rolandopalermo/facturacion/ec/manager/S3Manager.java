@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -18,10 +19,11 @@ import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.amazonaws.services.s3.model.AmazonS3Exception;
 import com.amazonaws.services.s3.model.Bucket;
+import com.amazonaws.services.s3.model.CannedAccessControlList;
+import com.amazonaws.services.s3.model.GeneratePresignedUrlRequest;
+import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.amazonaws.services.s3.model.S3Object;
 import com.amazonaws.services.s3.model.S3ObjectInputStream;
-
-import org.springframework.beans.factory.annotation.Value;
 
 public class S3Manager {
 
@@ -87,7 +89,7 @@ public class S3Manager {
         return named_bucket;
     }
 
-    public String uploadFile(byte [] data) throws AmazonServiceException, IOException {
+    public String [] uploadFile(byte [] data) throws AmazonServiceException, IOException {
 
 		String nombreArchivoXML = UUID.randomUUID().toString();
 
@@ -96,9 +98,15 @@ public class S3Manager {
         fos.write(data);
         fos.close();
 
-        s3.putObject(bucketName, nombreArchivoXML, tempFile);
+        PutObjectRequest request = new PutObjectRequest(bucketName, nombreArchivoXML, tempFile)
+                                        .withCannedAcl(CannedAccessControlList.PublicRead);
+        s3.putObject(request);
 
-        return nombreArchivoXML;
+        String urlFile = String.format("https://s3.amazonaws.com/%s/%s", bucketName, nombreArchivoXML);
+
+        String [] result = {nombreArchivoXML, urlFile};
+
+        return result;
     }
 
     public byte[] downloadFile(String name) {

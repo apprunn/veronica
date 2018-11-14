@@ -6,6 +6,7 @@ import java.util.Map;
 import okhttp3.OkHttpClient;
 import okhttp3.ResponseBody;
 import okhttp3.logging.HttpLoggingInterceptor;
+import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Retrofit;
 import retrofit2.converter.gson.GsonConverterFactory;
@@ -40,7 +41,7 @@ public class ApiClient {
     public interface SalesApi {
 
         @POST("electronic-taxes/{documentId}/{companyId}/document")
-        Callback<ResponseBody> updateSaleDocuementState(
+        Call<ResponseBody> updateSaleDocuementState(
             @Path("documentId") int documentId, 
             @Path("companyId") int companyId, 
             @Body Map<String, Object> body);

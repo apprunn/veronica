@@ -4,7 +4,6 @@ import static com.rolandopalermo.facturacion.ec.common.util.Constantes.API_DOC_A
 
 import java.io.File;
 import java.io.StringWriter;
-import java.util.Base64;
 
 import javax.validation.Valid;
 import javax.xml.bind.JAXBContext;
@@ -19,6 +18,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.rolandopalermo.facturacion.ec.bo.SriBO;
@@ -26,7 +26,7 @@ import com.rolandopalermo.facturacion.ec.common.exception.BadRequestException;
 import com.rolandopalermo.facturacion.ec.common.exception.InternalServerException;
 import com.rolandopalermo.facturacion.ec.common.exception.NegocioException;
 import com.rolandopalermo.facturacion.ec.common.exception.ResourceNotFoundException;
-import com.rolandopalermo.facturacion.ec.config.SQSServiceConfig;
+import com.rolandopalermo.facturacion.ec.manager.SQSManager;
 import com.rolandopalermo.facturacion.ec.dto.AutorizacionRequestDTO;
 import com.rolandopalermo.facturacion.ec.dto.RecepcionRequestDTO;
 import com.rolandopalermo.facturacion.ec.dto.ReceptionStorageDTO;
@@ -38,15 +38,11 @@ import com.rolandopalermo.facturacion.ec.modelo.notacredito.NotaCredito;
 import com.rolandopalermo.facturacion.ec.modelo.notadebito.NotaDebito;
 import com.rolandopalermo.facturacion.ec.modelo.retencion.ComprobanteRetencion;
 import com.rolandopalermo.facturacion.ec.web.bo.SaleDocumentBO;
-import com.rolandopalermo.facturacion.ec.web.domain.SaleDocument;
-
-import autorizacion.ws.sri.gob.ec.Autorizacion;
-import autorizacion.ws.sri.gob.ec.AutorizacionComprobanteResponse;
+import com.rolandopalermo.facturacion.ec.web.bo.SriBOv2;
 import autorizacion.ws.sri.gob.ec.RespuestaComprobante;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import io.swagger.annotations.ApiParam;
-import recepcion.ws.sri.gob.ec.Mensaje;
 import recepcion.ws.sri.gob.ec.RespuestaSolicitud;
 
 @RestController
@@ -58,6 +54,9 @@ public class SRIController {
 
 	@Autowired
 	private SriBO sriBO;
+
+	@Autowired
+	private SriBOv2 sriBOv2;
 
 	@Autowired 
 	SaleDocumentBO saleDocumentBO;
@@ -101,40 +100,11 @@ public class SRIController {
 	@PostMapping(value = "/enviar-storage", produces = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<RespuestaSolicitud> enviarComprobanteAlmacenado(
 		@ApiParam(value = "Parametros de compañia y comprobante electronico", required = true)
-		@RequestBody ReceptionStorageDTO request) {
+		@RequestBody ReceptionStorageDTO request,
+		@RequestParam int companyId) {
 
 		try {
-			SaleDocument saleDocument = saleDocumentBO.getLastSaleDocumentByDocumentId(request.getSaleDocumentId());
-
-			switch (saleDocument.getSaleDocumentState()) {
-				case SaleDocument.INCORRECTO:
-				throw new NegocioException("El documento es incorrecto, subir uno nuevo");
-				case SaleDocument.ENVIADO:
-				throw new NegocioException("El documento ya fue enviado");
-				case SaleDocument.AUTORIZADO:
-				throw new NegocioException("El documento ya fue autorizado");
-			}
-			
-			byte [] contenido = S3Manager.getInstance().downloadFile(saleDocument.getS3File());
-			
-			RespuestaSolicitud respuestaSolicitud = sriBO.enviarComprobante(contenido, wsdlRecepcion);
-			
-			String estado = respuestaSolicitud.getEstado();
-			if (estado.equals("DEVUELTA")) {
-				String message = estado + ":\n";
-				for (Mensaje mensaje : respuestaSolicitud.getComprobantes().getComprobante().get(0).getMensajes().getMensaje()) {
-					message += mensaje.getMensaje() + "\n";
-				}
-
-				saleDocument.setSaleDocumentState(SaleDocument.INCORRECTO);
-				saleDocumentBO.updateSaleDocument(saleDocument);
-
-				throw new NegocioException(message);
-			}
-
-			saleDocument.setSaleDocumentState(SaleDocument.ENVIADO);
-			saleDocumentBO.updateSaleDocument(saleDocument);
-
+			RespuestaSolicitud respuestaSolicitud = sriBOv2.enviarDocumento(request, wsdlRecepcion, baseURL, companyId);
 			return new ResponseEntity<RespuestaSolicitud>(respuestaSolicitud, HttpStatus.OK);
 		} catch (NegocioException e) {
 			logger.error("enviarComprobante", e);
@@ -149,52 +119,10 @@ public class SRIController {
 	@PostMapping(value = "/autorizar", produces = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<RespuestaComprobante> autorizarComprobante(
 			@ApiParam(value = "Clave de acceso del comprobante electrónico", required = true) 
-			@RequestBody AutorizacionRequestDTO request) {
+			@RequestBody AutorizacionRequestDTO request,
+			@RequestParam int companyId) {
 		try {
-
-			SaleDocument saleDocument = saleDocumentBO.getLastSaleDocumentByClaveAcceso(request.getClaveAcceso());
-
-			if (saleDocument == null) {
-				throw new NegocioException("No hay documento registrado");
-			} 
-
-			RespuestaComprobante respuestaComprobante = sriBO.autorizarComprobante(request.getClaveAcceso(), wsdlAutorizacion);
-			
-			if (saleDocument.getSaleDocumentState() == SaleDocument.AUTORIZADO) {
-				return new ResponseEntity<RespuestaComprobante>(
-					respuestaComprobante, HttpStatus.OK);
-			}
-
-
-			if (!respuestaComprobante.getNumeroComprobantes().equals("0")) {
-				Autorizacion autorizacion =  respuestaComprobante.getAutorizaciones().getAutorizacion().get(0);
-				String estado = autorizacion.getEstado();
-				if (estado.equals("AUTORIZADO")) {
-					saleDocument.setSaleDocumentState(SaleDocument.AUTORIZADO);
-
-					StringWriter sw = new StringWriter();
-					JAXBContext jaxbContext = JAXBContext.newInstance(AutorizacionComprobanteResponse.class);
-					Marshaller jaxbMarshaller = jaxbContext.createMarshaller();
-					AutorizacionComprobanteResponse au = new AutorizacionComprobanteResponse();
-					au.setRespuestaAutorizacionComprobante(respuestaComprobante);
-					jaxbMarshaller.marshal(au, sw);
-					String xmlString = sw.toString();
-					xmlString = xmlString.replace("&lt;", "<").replace("&gt;", ">").replace("<?xml version=\"1.0\" encoding=\"UTF-8\"?>", "");
-					byte [] data = xmlString.getBytes("utf-8");
-
-					// TODO: ENVIAR AL S3
-					String name = S3Manager.getInstance().uploadFile(data);
-					saleDocument.setS3File(name);
-
-				} else {
-					saleDocument.setSaleDocumentState(SaleDocument.NO_AUTORIZADO);
-				}
-			} else {
-				saleDocument.setSaleDocumentState(SaleDocument.INCORRECTO);
-			}
-
-			saleDocumentBO.updateSaleDocument(saleDocument);
-
+			RespuestaComprobante respuestaComprobante = sriBOv2.autorizar(request, wsdlAutorizacion, baseURL, companyId);
 			return new ResponseEntity<RespuestaComprobante>(
 				respuestaComprobante, HttpStatus.OK);
 		} catch (NegocioException e) {

@@ -1,5 +1,6 @@
 package com.rolandopalermo.facturacion.ec.web.controller;
 
+import javax.annotation.Resource;
 import javax.validation.Valid;
 
 import org.apache.log4j.Logger;
@@ -20,7 +21,7 @@ import com.rolandopalermo.facturacion.ec.common.exception.BadRequestException;
 import com.rolandopalermo.facturacion.ec.common.exception.InternalServerException;
 import com.rolandopalermo.facturacion.ec.common.exception.NegocioException;
 import com.rolandopalermo.facturacion.ec.common.exception.ResourceNotFoundException;
-import com.rolandopalermo.facturacion.ec.config.SQSServiceConfig;
+import com.rolandopalermo.facturacion.ec.manager.SQSManager;
 import com.rolandopalermo.facturacion.ec.modelo.ComprobanteElectronico;
 import com.rolandopalermo.facturacion.ec.modelo.factura.Factura;
 import com.rolandopalermo.facturacion.ec.modelo.guia.GuiaRemision;
@@ -60,6 +61,9 @@ public class RegistroComprobanteController {
 
 	@Autowired
 	private SaleDocumentBO saleDocumentBO;
+
+	@Resource(name = "sqs_manager")
+	SQSManager sqsManager;
 
 	@ApiOperation(value = "Genera,firmar y encola envio de factura en formato XML")
 	@PostMapping(value = "/factura", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -126,19 +130,18 @@ public class RegistroComprobanteController {
 
 			SaleDocument saleDocument = saleDocumentBO.saveSaleDocument(company, request.getInfoTributaria().getClaveAcceso(), saleDocumentId, documentCode, content, signedContent, override);
 
-			SQSServiceConfig sqsServiceConfig = SQSServiceConfig.getInstance();
-
 			Map<String, String> message = new HashMap<>();
 
 			message.put("ruc", company.getRuc());
 			message.put("saleDocumentId", String.valueOf(saleDocumentId));
+			message.put("companyId", String.valueOf(company.getCompanyId()));
 
-			String messageGroupId = String.format("group_%d_#d", company.getCompanyId(), saleDocument.getSaleDocumentId());
+			String messageGroupId = String.format("group_%d_%d_%d", saleDocument.getId(), company.getCompanyId(), saleDocument.getSaleDocumentId());
 
 			Gson gson = new Gson();
 			String strMessage = gson.toJson(message);
 
-			// sqsServiceConfig.sendMessage(strMessage, messageGroupId);
+			sqsManager.sendMessage(strMessage, messageGroupId);
 
 			return new ResponseEntity<SaleDocument>(saleDocument, HttpStatus.OK);
 		} catch (NegocioException e) {

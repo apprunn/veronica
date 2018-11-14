@@ -96,6 +96,12 @@
 			<artifactId>aws-java-sdk-s3</artifactId>
 			<version>1.11.447</version>
 		</dependency>
+		<dependency>
+			<groupId>com.amazonaws</groupId>
+			<artifactId>amazon-sqs-java-messaging-lib</artifactId>
+			<version>1.0.4</version>
+			<type>jar</type>
+		</dependency>
 
 		<dependency>
 			<groupId>com.google.code.gson</groupId>

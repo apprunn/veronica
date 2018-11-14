@@ -1,6 +1,7 @@
 package com.rolandopalermo.facturacion.ec.web.domain;
 
 import javax.persistence.Basic;
+import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
@@ -40,8 +41,6 @@ public class SaleDocument {
 
     @NotNull
     private int saleDocumentId;
-    @NotNull
-    private String saleDocumentPath;
     private String saleDocumentCode;
     @NotNull
     private String claveAcceso;
@@ -56,6 +55,10 @@ public class SaleDocument {
     private int version;
 
     private String s3File;
+
+    @NotNull
+    @Column(length = 255)
+    private String publicURL;
 
     // @Lob
     // @Basic(fetch = FetchType.LAZY)

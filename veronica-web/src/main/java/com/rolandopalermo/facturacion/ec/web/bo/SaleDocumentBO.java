@@ -1,8 +1,6 @@
 package com.rolandopalermo.facturacion.ec.web.bo;
 
 import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
 import java.nio.file.Files;
 import java.util.List;
 
@@ -116,34 +114,18 @@ public class SaleDocumentBO {
             }
 
             saleDocument.setVersion(version);
-            
-            // Save sale document in storage
-
-            String directory = "saleDocuments/" + company.getRuc();
-            String fileName = saleDocumentId + "_v" + saleDocument.getVersion() + ".xml";
-            String fileNameSigned = saleDocumentId + "_v" + saleDocument.getVersion() + "_signed.xml";
-
-            // Crear directorios
-            new File(directory).mkdirs();
-
-            String path = directory + "/" + fileName;
-            String pathSigned = directory + "/" + fileNameSigned;
-
-            createFile(saleXML, path);
-            createFile(saleSignedXml, pathSigned);
 
             // Save in database
             saleDocument.setCompany(company);
-            saleDocument.setSaleDocumentPath(pathSigned);
             saleDocument.setSaleDocumentId(saleDocumentId);
             saleDocument.setSaleDocumentCode(documentCode);
-            // saleDocument.setXml(saleSignedXml);
             saleDocument.setClaveAcceso(claveAcceso);
 
-            String nameXml = S3Manager.getInstance().uploadFile(saleSignedXml);
-            System.out.println(nameXml);
+            String [] nameXml = S3Manager.getInstance().uploadFile(saleSignedXml);
+            System.out.println(nameXml[0]);
 
-            saleDocument.setS3File(nameXml);
+            saleDocument.setS3File(nameXml[0]);
+            saleDocument.setPublicURL(nameXml[1]);
 
             return saleDocumentRepository.save(saleDocument);
 
@@ -153,13 +135,5 @@ public class SaleDocumentBO {
         }
     }
 
-    private void createFile(byte [] data, String path) throws IOException {
-        File file = new File(path);
-        file.createNewFile();
-
-        FileOutputStream oFile = new FileOutputStream(file, false);
-        oFile.write(data);
-        oFile.close();
-    }
 
 }
