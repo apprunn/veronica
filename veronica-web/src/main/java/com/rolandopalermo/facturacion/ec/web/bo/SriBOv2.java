@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.io.StringWriter;
 import java.io.UnsupportedEncodingException;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import javax.xml.bind.JAXBContext;
@@ -19,6 +20,7 @@ import com.rolandopalermo.facturacion.ec.manager.S3Manager;
 import com.rolandopalermo.facturacion.ec.web.domain.SaleDocument;
 import com.rolandopalermo.facturacion.ec.web.services.ApiClient;
 
+import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -33,13 +35,15 @@ import retrofit2.Response;
 @Service
 public class SriBOv2 {
 
+	private static final Logger logger = Logger.getLogger(SriBOv2.class);
+
     @Autowired
     SriBO sriBO;
 
     @Autowired
     SaleDocumentBO saleDocumentBO;
 
-    public RespuestaSolicitud enviarDocumento(ReceptionStorageDTO request, String wsdlRecepcion, String urlBase, int companyId) throws NegocioException {
+    public RespuestaSolicitud enviarDocumento(ReceptionStorageDTO request, String wsdlRecepcion, String urlBase) throws NegocioException {
         SaleDocument saleDocument = saleDocumentBO.getLastSaleDocumentByDocumentId(request.getSaleDocumentId());
 
         switch (saleDocument.getSaleDocumentState()) {
@@ -56,7 +60,7 @@ public class SriBOv2 {
         RespuestaSolicitud respuestaSolicitud = sriBO.enviarComprobante(contenido, wsdlRecepcion);
         
         String estado = respuestaSolicitud.getEstado();
-        if (estado.equals("DEVUELTA")) {
+        if (estado.equals("DEVUELTA") && !respuestaSolicitud.getComprobantes().getComprobante().isEmpty()) {
             String message = estado + ":\n";
             for (Mensaje mensaje : respuestaSolicitud.getComprobantes().getComprobante().get(0).getMensajes().getMensaje()) {
                 message += mensaje.getMensaje() + "\n";
@@ -64,19 +68,27 @@ public class SriBOv2 {
 
             saleDocument.setSaleDocumentState(SaleDocument.INCORRECTO);
             saleDocumentBO.updateSaleDocument(saleDocument);
-            actualizarDocumentoSale(urlBase, saleDocument.getSaleDocumentId(), 5, companyId);
+
+            String mensaje = respuestaSolicitud.getComprobantes().getComprobante().get(0).getMensajes().getMensaje().get(0).getMensaje();
+            String aditional = respuestaSolicitud.getComprobantes().getComprobante().get(0).getMensajes().getMensaje().get(0).getInformacionAdicional();
+
+            actualizarDocumentoSale(urlBase, saleDocument, 5, mensaje);
+
+            logger.error(saleDocument.getSaleDocumentId());
+            logger.error(mensaje);
+            logger.error(aditional);
 
             throw new NegocioException(message, SaleDocument.INCORRECTO);
         }
 
         saleDocument.setSaleDocumentState(SaleDocument.ENVIADO);
         saleDocumentBO.updateSaleDocument(saleDocument);
-        actualizarDocumentoSale(urlBase, saleDocument.getSaleDocumentId(), 4, companyId);
+        actualizarDocumentoSale(urlBase, saleDocument, 4, "ENVIADO");
 
         return respuestaSolicitud;
     }
 
-    public RespuestaComprobante autorizar(AutorizacionRequestDTO request, String wsdlAutorizacion, String urlBase, int companyId) throws NegocioException, JAXBException, AmazonServiceException, IOException {
+    public RespuestaComprobante autorizar(AutorizacionRequestDTO request, String wsdlAutorizacion, String urlBase) throws NegocioException, JAXBException, AmazonServiceException, IOException {
         SaleDocument saleDocument = saleDocumentBO.getLastSaleDocumentByClaveAcceso(request.getClaveAcceso());
 
         if (saleDocument == null) {
@@ -89,7 +101,7 @@ public class SriBOv2 {
             return respuestaComprobante;
         }
 
-        if (!respuestaComprobante.getNumeroComprobantes().equals("0")) {
+        if (!respuestaComprobante.getAutorizaciones().getAutorizacion().isEmpty()) {
             Autorizacion autorizacion =  respuestaComprobante.getAutorizaciones().getAutorizacion().get(0);
             String estado = autorizacion.getEstado();
             if (estado.equals("AUTORIZADO")) {
@@ -112,15 +124,27 @@ public class SriBOv2 {
                 saleDocument.setS3File(name[0]);
                 saleDocument.setPublicURL(name[1]);
 
-                actualizarDocumentoSale(urlBase, saleDocument.getSaleDocumentId(), 7, companyId);
+                actualizarDocumentoSale(urlBase, saleDocument, 7, "EXITO");
 
             } else {
                 // TODO REVISAR ESTE ESPACIO
-                actualizarDocumentoSale(urlBase, saleDocument.getSaleDocumentId(), 4, companyId);
+                List<autorizacion.ws.sri.gob.ec.Mensaje> messages = autorizacion.getMensajes().getMensaje();
+
+                String strMessage = "";
+
+                if (messages.isEmpty()) {
+                    strMessage = "No message";
+                } else {
+                    for (autorizacion.ws.sri.gob.ec.Mensaje m : messages) {
+                        strMessage += m.getMensaje() + "\n";
+                    }
+                }
+
+                actualizarDocumentoSale(urlBase, saleDocument, 4, strMessage);
                 saleDocument.setSaleDocumentState(SaleDocument.NO_AUTORIZADO);
             }
         } else {
-            actualizarDocumentoSale(urlBase, saleDocument.getSaleDocumentId(), 1, companyId);
+            actualizarDocumentoSale(urlBase, saleDocument, 1, "DATA NO ENVIADA");
             saleDocument.setSaleDocumentState(SaleDocument.INCORRECTO);
         }
 
@@ -129,16 +153,18 @@ public class SriBOv2 {
         return respuestaComprobante;
     }
 
-    public void actualizarDocumentoSale(String urlBase, int saleDocumentId, int state, int companyId) {
+    public void actualizarDocumentoSale(String urlBase, SaleDocument saleDocument, int state, String message) {
 
         Map<String, Object> body = new HashMap<>();
         body.put("stateDocument", state);
         // Null keys
-        body.put("msgSri", null);
+        body.put("msgSri", message);
         body.put("urlXml", null);
 
         try {
-            Response<ResponseBody> response =  ApiClient.getSaleApi(urlBase).updateSaleDocuementState(saleDocumentId, companyId, body).execute();
+            Response<ResponseBody> response = ApiClient.getSaleApi(urlBase)
+                            .updateSaleDocuementState(saleDocument.getSaleDocumentId(), saleDocument.getCompany().getCompanyId(), body)
+                            .execute();
 
             if (response.isSuccessful()) {
                 System.out.println("SALE ACTUALIZADO");

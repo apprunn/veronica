@@ -99,7 +99,7 @@ public class SaleDocumentBO {
 
                 int state = result.getSaleDocumentState();
 
-                if (state == SaleDocument.ENVIADO) {
+                if (state == SaleDocument.AUTORIZADO) {
                     throw new NegocioException("Este comprobante ya fue autorizado");
                 }
 

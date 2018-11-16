@@ -100,11 +100,10 @@ public class SRIController {
 	@PostMapping(value = "/enviar-storage", produces = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<RespuestaSolicitud> enviarComprobanteAlmacenado(
 		@ApiParam(value = "Parametros de compañia y comprobante electronico", required = true)
-		@RequestBody ReceptionStorageDTO request,
-		@RequestParam int companyId) {
+		@RequestBody ReceptionStorageDTO request) {
 
 		try {
-			RespuestaSolicitud respuestaSolicitud = sriBOv2.enviarDocumento(request, wsdlRecepcion, baseURL, companyId);
+			RespuestaSolicitud respuestaSolicitud = sriBOv2.enviarDocumento(request, wsdlRecepcion, baseURL);
 			return new ResponseEntity<RespuestaSolicitud>(respuestaSolicitud, HttpStatus.OK);
 		} catch (NegocioException e) {
 			logger.error("enviarComprobante", e);
@@ -116,13 +115,30 @@ public class SRIController {
 	}
 
 	@ApiOperation(value = "Solicita la validación de una clave de acceso")
-	@PostMapping(value = "/autorizar", produces = MediaType.APPLICATION_JSON_VALUE)
+	@PostMapping(value = "/autorizar/v1", produces = MediaType.APPLICATION_JSON_VALUE)
+	public ResponseEntity<RespuestaComprobante> autorizarComprobanteV2(
+			@ApiParam(value = "Clave de acceso del comprobante electrónico", required = true) 
+			@RequestBody AutorizacionRequestDTO request) {
+		try {
+			RespuestaComprobante respuestaComprobante = sriBOv2.autorizar(request, wsdlAutorizacion, baseURL);
+			return new ResponseEntity<RespuestaComprobante>(
+				respuestaComprobante, HttpStatus.OK);
+		} catch (NegocioException e) {
+			logger.error("autorizarComprobante", e);
+			throw new BadRequestException(e.getMessage());
+		} catch (Exception e) {
+			logger.error("autorizarComprobante", e);
+			throw new InternalServerException(e.getMessage());
+		}
+	}
+
+	@ApiOperation(value = "Solicita la validación de una clave de acceso")
+	@PostMapping(value = "/autorizar/", produces = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<RespuestaComprobante> autorizarComprobante(
 			@ApiParam(value = "Clave de acceso del comprobante electrónico", required = true) 
-			@RequestBody AutorizacionRequestDTO request,
-			@RequestParam int companyId) {
+			@RequestBody AutorizacionRequestDTO request) {
 		try {
-			RespuestaComprobante respuestaComprobante = sriBOv2.autorizar(request, wsdlAutorizacion, baseURL, companyId);
+			RespuestaComprobante respuestaComprobante = sriBO.autorizarComprobante(request.getClaveAcceso(), wsdlAutorizacion);
 			return new ResponseEntity<RespuestaComprobante>(
 				respuestaComprobante, HttpStatus.OK);
 		} catch (NegocioException e) {

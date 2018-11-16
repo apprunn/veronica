@@ -12,6 +12,7 @@ import javax.jms.Queue;
 import javax.jms.Session;
 import javax.jms.TextMessage;
 
+import com.amazon.sqs.javamessaging.ProviderConfiguration;
 import com.amazon.sqs.javamessaging.SQSConnection;
 import com.amazon.sqs.javamessaging.SQSConnectionFactory;
 import com.amazon.sqs.javamessaging.message.SQSMessage;
@@ -85,11 +86,9 @@ public class SQSManager {
 
         queueUrl = sqs.getQueueUrl("sri-dev.fifo").getQueueUrl();
 
-        Region region = Region.getRegion(Regions.US_EAST_1);
-
         try {
-            connection = new SQSConnectionFactory.Builder(region)
-                    .build()
+            
+            connection = new SQSConnectionFactory(new ProviderConfiguration(), sqs)
                     .createConnection(credentialsProvider.getCredentials());
             
             createConsumer();
@@ -105,7 +104,6 @@ public class SQSManager {
         Session session = connection.createSession(false, Session.CLIENT_ACKNOWLEDGE);
 
         Queue queue = session.createQueue("sri-dev.fifo");
-        // String queueUrl = sqs.getQueueUrl(").getQueueUrl();
         
         MessageConsumer consumer = session.createConsumer(queue);
 
@@ -197,12 +195,10 @@ public class SQSManager {
                 int saleDocumentId = Integer.parseInt(data.get("saleDocumentId"));
 
                 request.setSaleDocumentId(saleDocumentId);
-
-                int companyId = Integer.parseInt(data.get("companyId"));
                 
-                RespuestaSolicitud respuesta = sriBo.enviarDocumento(request, wsdlRecepcion, urlBase, companyId);
+                RespuestaSolicitud respuesta = sriBo.enviarDocumento(request, wsdlRecepcion, urlBase);
 
-                autorizar(respuesta, companyId);
+                autorizar(respuesta);
 
                 String receiptHandle = ((SQSMessage) message).getReceiptHandle();
                 deleteMessage(receiptHandle);
@@ -223,7 +219,7 @@ public class SQSManager {
 
         }
 
-        private void autorizar(RespuestaSolicitud respuesta, int companyId) {
+        private void autorizar(RespuestaSolicitud respuesta) {
             try {
                 Comprobantes comprobantes = respuesta.getComprobantes();
                 if (comprobantes != null) {
@@ -232,49 +228,14 @@ public class SQSManager {
                     for (Comprobante comprobante : listComprobantes) {
                         AutorizacionRequestDTO request = new AutorizacionRequestDTO();
                         request.setClaveAcceso(comprobante.getClaveAcceso());
-                        sriBo.autorizar(request, wsdlAutorizacion, urlBase, companyId);
-
-                        // ACTUALIZAR DATOS
+                        sriBo.autorizar(request, wsdlAutorizacion, urlBase);
                     }
-                    System.out.println("EL DOCUMENTO AUTORIZADO");
                 }
             } catch (Exception e) {
                 // INICIAR SEGUNDA COLA
                 System.out.println("EL DOCUMENTO NO AUTORIZADO");
             }
         }
-
-    }
-
-    class SQSThread extends Thread {
-
-        Gson gson = new Gson();
-
-        Type type = new TypeToken<Map<String, String>>(){}.getType();
-
-        @Override
-        public void run() {
-            
-            while (true) {
-                try {
-
-                    List<Message> messages = receiveMessage(true);
-
-                    for (Message m : messages) {
-                        Map<String, String> data = gson.fromJson(m.getBody(), type);
-
-                        // TODO: Send paramenters
-                    }
-
-                    Thread.sleep(5000);
-
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-            }
-
-        }
-
     }
 
 }
