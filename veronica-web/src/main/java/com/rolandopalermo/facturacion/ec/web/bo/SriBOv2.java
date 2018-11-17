@@ -136,16 +136,24 @@ public class SriBOv2 {
                     strMessage = "No message";
                 } else {
                     for (autorizacion.ws.sri.gob.ec.Mensaje m : messages) {
-                        strMessage += m.getMensaje() + "\n";
+                        strMessage += "mensaje: " + m.getMensaje() + "\n";
+                        strMessage += "adicional" + m.getInformacionAdicional() + "\n";
                     }
                 }
 
-                actualizarDocumentoSale(urlBase, saleDocument, 4, strMessage);
+                actualizarDocumentoSale(urlBase, saleDocument, 8, strMessage);
                 saleDocument.setSaleDocumentState(SaleDocument.NO_AUTORIZADO);
+
+                logger.error(saleDocument.getSaleDocumentId());
+                logger.error(strMessage);
+
             }
         } else {
             actualizarDocumentoSale(urlBase, saleDocument, 1, "DATA NO ENVIADA");
             saleDocument.setSaleDocumentState(SaleDocument.INCORRECTO);
+
+            logger.error(saleDocument.getSaleDocumentId());
+            logger.error("NO DATA");
         }
 
         saleDocumentBO.updateSaleDocument(saleDocument);

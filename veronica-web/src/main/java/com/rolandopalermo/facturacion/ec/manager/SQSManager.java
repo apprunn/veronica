@@ -31,6 +31,7 @@ import com.google.gson.Gson;
 import com.rolandopalermo.facturacion.ec.common.exception.NegocioException;
 import com.rolandopalermo.facturacion.ec.dto.AutorizacionRequestDTO;
 import com.rolandopalermo.facturacion.ec.dto.ReceptionStorageDTO;
+import com.rolandopalermo.facturacion.ec.web.bo.SaleDocumentBO;
 import com.rolandopalermo.facturacion.ec.web.bo.SriBOv2;
 import com.rolandopalermo.facturacion.ec.web.domain.SaleDocument;
 
@@ -60,6 +61,9 @@ public class SQSManager {
 
     @Autowired
     private SriBOv2 sriBo;
+
+    @Autowired
+    private SaleDocumentBO saleDocumentBO;
 
     public SQSManager() {
         initialize();
@@ -194,11 +198,13 @@ public class SQSManager {
 
                 int saleDocumentId = Integer.parseInt(data.get("saleDocumentId"));
 
+                SaleDocument saleDocument = saleDocumentBO.getLastSaleDocumentByDocumentId(saleDocumentId);
+
                 request.setSaleDocumentId(saleDocumentId);
                 
-                RespuestaSolicitud respuesta = sriBo.enviarDocumento(request, wsdlRecepcion, urlBase);
+                sriBo.enviarDocumento(request, wsdlRecepcion, urlBase);
 
-                autorizar(respuesta);
+                autorizar(saleDocument.getClaveAcceso());
 
                 String receiptHandle = ((SQSMessage) message).getReceiptHandle();
                 deleteMessage(receiptHandle);
@@ -219,18 +225,11 @@ public class SQSManager {
 
         }
 
-        private void autorizar(RespuestaSolicitud respuesta) {
+        private void autorizar(String claveAcceso) {
             try {
-                Comprobantes comprobantes = respuesta.getComprobantes();
-                if (comprobantes != null) {
-                    List<Comprobante> listComprobantes = comprobantes.getComprobante();
-    
-                    for (Comprobante comprobante : listComprobantes) {
-                        AutorizacionRequestDTO request = new AutorizacionRequestDTO();
-                        request.setClaveAcceso(comprobante.getClaveAcceso());
-                        sriBo.autorizar(request, wsdlAutorizacion, urlBase);
-                    }
-                }
+                AutorizacionRequestDTO request = new AutorizacionRequestDTO();
+                request.setClaveAcceso(claveAcceso);
+                sriBo.autorizar(request, wsdlAutorizacion, urlBase);
             } catch (Exception e) {
                 // INICIAR SEGUNDA COLA
                 System.out.println("EL DOCUMENTO NO AUTORIZADO");
