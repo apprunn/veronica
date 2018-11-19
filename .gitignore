@@ -17,3 +17,4 @@ out/
 *.log
 /saleDocuments
 /src/filters
+veronica-web/src/main/resources/application.properties
