@@ -3,8 +3,11 @@ package com.rolandopalermo.facturacion.ec.web.controller;
 import static com.rolandopalermo.facturacion.ec.common.util.Constantes.API_DOC_ANEXO_1;
 
 import java.io.File;
+import java.io.StringWriter;
 
 import javax.validation.Valid;
+import javax.xml.bind.JAXBContext;
+import javax.xml.bind.Marshaller;
 
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,6 +18,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.rolandopalermo.facturacion.ec.bo.SriBO;
@@ -22,15 +26,19 @@ import com.rolandopalermo.facturacion.ec.common.exception.BadRequestException;
 import com.rolandopalermo.facturacion.ec.common.exception.InternalServerException;
 import com.rolandopalermo.facturacion.ec.common.exception.NegocioException;
 import com.rolandopalermo.facturacion.ec.common.exception.ResourceNotFoundException;
+import com.rolandopalermo.facturacion.ec.manager.SQSManager;
 import com.rolandopalermo.facturacion.ec.dto.AutorizacionRequestDTO;
 import com.rolandopalermo.facturacion.ec.dto.RecepcionRequestDTO;
+import com.rolandopalermo.facturacion.ec.dto.ReceptionStorageDTO;
+import com.rolandopalermo.facturacion.ec.manager.S3Manager;
 import com.rolandopalermo.facturacion.ec.modelo.ComprobanteElectronico;
 import com.rolandopalermo.facturacion.ec.modelo.factura.Factura;
 import com.rolandopalermo.facturacion.ec.modelo.guia.GuiaRemision;
 import com.rolandopalermo.facturacion.ec.modelo.notacredito.NotaCredito;
 import com.rolandopalermo.facturacion.ec.modelo.notadebito.NotaDebito;
 import com.rolandopalermo.facturacion.ec.modelo.retencion.ComprobanteRetencion;
-
+import com.rolandopalermo.facturacion.ec.web.bo.SaleDocumentBO;
+import com.rolandopalermo.facturacion.ec.web.bo.SriBOv2;
 import autorizacion.ws.sri.gob.ec.RespuestaComprobante;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
@@ -47,6 +55,12 @@ public class SRIController {
 	@Autowired
 	private SriBO sriBO;
 
+	@Autowired
+	private SriBOv2 sriBOv2;
+
+	@Autowired 
+	SaleDocumentBO saleDocumentBO;
+
 	@Value("${pkcs12.certificado.ruta}")
 	private String rutaArchivoPkcs12;
 
@@ -58,6 +72,9 @@ public class SRIController {
 
 	@Value("${sri.wsdl.autorizacion}")
 	private String wsdlAutorizacion;
+
+	@Value("${sales.ruta}")
+    private String baseURL;
 
 	@ApiOperation(value = "Envía un comprobante electrónico a validar al SRI")
 	@PostMapping(value = "/enviar", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -79,14 +96,51 @@ public class SRIController {
 		}
 	}
 
+	@ApiOperation(value = "Envía un comprobante electronico almacenado a validar al SRI y lo autoriza")
+	@PostMapping(value = "/enviar-storage", produces = MediaType.APPLICATION_JSON_VALUE)
+	public ResponseEntity<RespuestaSolicitud> enviarComprobanteAlmacenado(
+		@ApiParam(value = "Parametros de compañia y comprobante electronico", required = true)
+		@RequestBody ReceptionStorageDTO request) {
+
+		try {
+			RespuestaSolicitud respuestaSolicitud = sriBOv2.enviarDocumento(request, wsdlRecepcion, baseURL);
+			return new ResponseEntity<RespuestaSolicitud>(respuestaSolicitud, HttpStatus.OK);
+		} catch (NegocioException e) {
+			logger.error("enviarComprobante", e);
+			throw new BadRequestException(e.getMessage());
+		} catch (Exception e) {
+			logger.error("enviarComprobante", e);
+			throw new InternalServerException(e.getMessage());
+		}
+	}
+
 	@ApiOperation(value = "Solicita la validación de una clave de acceso")
-	@PostMapping(value = "/autorizar", produces = MediaType.APPLICATION_JSON_VALUE)
+	@PostMapping(value = "/autorizar/v1", produces = MediaType.APPLICATION_JSON_VALUE)
+	public ResponseEntity<RespuestaComprobante> autorizarComprobanteV2(
+			@ApiParam(value = "Clave de acceso del comprobante electrónico", required = true) 
+			@RequestBody AutorizacionRequestDTO request) {
+		try {
+			RespuestaComprobante respuestaComprobante = sriBOv2.autorizar(request, wsdlAutorizacion, baseURL);
+			return new ResponseEntity<RespuestaComprobante>(
+				respuestaComprobante, HttpStatus.OK);
+		} catch (NegocioException e) {
+			logger.error("autorizarComprobante", e);
+			throw new BadRequestException(e.getMessage());
+		} catch (Exception e) {
+			logger.error("autorizarComprobante", e);
+			throw new InternalServerException(e.getMessage());
+		}
+	}
+
+	@ApiOperation(value = "Solicita la validación de una clave de acceso")
+	@PostMapping(value = "/autorizar/", produces = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<RespuestaComprobante> autorizarComprobante(
 			@ApiParam(value = "Clave de acceso del comprobante electrónico", required = true) 
 			@RequestBody AutorizacionRequestDTO request) {
 		try {
+			RespuestaComprobante respuestaComprobante = sriBO.autorizarComprobante(request.getClaveAcceso(), wsdlAutorizacion);
 			return new ResponseEntity<RespuestaComprobante>(
-					sriBO.autorizarComprobante(request.getClaveAcceso(), wsdlAutorizacion), HttpStatus.OK);
+				respuestaComprobante, HttpStatus.OK);
 		} catch (NegocioException e) {
 			logger.error("autorizarComprobante", e);
 			throw new BadRequestException(e.getMessage());

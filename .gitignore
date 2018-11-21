@@ -13,3 +13,8 @@ out/
 /bootstrap
 /dependencies.xml
 .java-version
+*.p12
+*.log
+/saleDocuments
+/src/filters
+veronica-web/src/main/resources/application.properties
