@@ -63,9 +63,8 @@ public class GeneracionController {
 			@Valid
 			@ApiParam(value = API_DOC_ANEXO_1, required = true) 
 			@RequestBody Factura request,
-			@RequestParam int saleDocumentId,
-			@RequestParam(required = false, defaultValue = "false") boolean override) {
-		return generarDocumentoElectronico(request, saleDocumentId, "FAC", override);
+			@RequestParam int saleDocumentId) {
+		return generarDocumentoElectronico(request, saleDocumentId, "FAC");
 	}
 
 	@ApiOperation(value = "Genera y firmar una guía de remisión en formato XML")
@@ -74,9 +73,8 @@ public class GeneracionController {
 			@Valid
 			@ApiParam(value = API_DOC_ANEXO_1, required = true) 
 			@RequestBody GuiaRemision request,
-			@RequestParam int saleDocumentId,
-			@RequestParam(required = false, defaultValue = "false") boolean override) {
-		return generarDocumentoElectronico(request, saleDocumentId, "REM", override);
+			@RequestParam int saleDocumentId) {
+		return generarDocumentoElectronico(request, saleDocumentId, "GRM");
 	}
 
 	@ApiOperation(value = "Genera y firmar una nota de crédito en formato XML")
@@ -85,9 +83,8 @@ public class GeneracionController {
 			@Valid
 			@ApiParam(value = API_DOC_ANEXO_1, required = true) 
 			@RequestBody NotaCredito request,
-			@RequestParam int saleDocumentId,
-			@RequestParam(required = false, defaultValue = "false") boolean override) {
-		return generarDocumentoElectronico(request, saleDocumentId, "CRE", override);
+			@RequestParam int saleDocumentId) {
+		return generarDocumentoElectronico(request, saleDocumentId, "NTC");
 	}
 
 	@ApiOperation(value = "Genera y firmar una nota de débito en formato XML")
@@ -96,9 +93,8 @@ public class GeneracionController {
 			@Valid
 			@ApiParam(value = API_DOC_ANEXO_1, required = true) 
 			@RequestBody NotaDebito request,
-			@RequestParam int saleDocumentId,
-			@RequestParam(required = false, defaultValue = "false") boolean override) {
-		return generarDocumentoElectronico(request, saleDocumentId, "DEB", override);
+			@RequestParam int saleDocumentId) {
+		return generarDocumentoElectronico(request, saleDocumentId, "NTD");
 	}
 
 	@ApiOperation(value = "Genera y firmar un comprobante de retención en formato XML")
@@ -107,12 +103,11 @@ public class GeneracionController {
 			@Valid
 			@ApiParam(value = API_DOC_ANEXO_1, required = true) 
 			@RequestBody ComprobanteRetencion request,
-			@RequestParam int saleDocumentId,
-			@RequestParam(required = false, defaultValue = "false") boolean override) {
-		return generarDocumentoElectronico(request, saleDocumentId, "RET", override);
+			@RequestParam int saleDocumentId) {
+		return generarDocumentoElectronico(request, saleDocumentId, "CRT");
 	}
 
-	private ResponseEntity<SaleDocument> generarDocumentoElectronico(ComprobanteElectronico request, int saleDocumentId, String documentCode, boolean override) {
+	private ResponseEntity<SaleDocument> generarDocumentoElectronico(ComprobanteElectronico request, int saleDocumentId, String documentCode) {
 		try {
 			byte[] content = generadorBO.generarXMLDocumentoElectronico(request);
 
@@ -120,7 +115,7 @@ public class GeneracionController {
 
 			byte[] signedContent = firmarComprobanteElectronico(content, company);
 
-			SaleDocument saleDocument = saleDocumentBO.saveSaleDocument(company, request.getInfoTributaria().getClaveAcceso(), saleDocumentId, documentCode, content, signedContent, override);
+			SaleDocument saleDocument = saleDocumentBO.saveSaleDocument(company, request.getInfoTributaria().getClaveAcceso(), saleDocumentId, documentCode, content, signedContent);
 
 			// FIRMAR DOCUMENTO
 			return new ResponseEntity<SaleDocument>(saleDocument, HttpStatus.OK);

@@ -167,7 +167,8 @@ public class SriBOv2 {
         body.put("stateDocument", state);
         // Null keys
         body.put("msgSri", message);
-        body.put("urlXml", null);
+        body.put("urlXml", saleDocument.getPublicURL());
+        body.put("typeDocumentCode", saleDocument.getSaleDocumentCode());
 
         try {
             Response<ResponseBody> response = ApiClient.getSaleApi(urlBase)
@@ -181,13 +182,10 @@ public class SriBOv2 {
             }
 
         } catch (IOException e) {
-            
-            e.printStackTrace();
+            logger.error(e.getMessage());
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.error(e.getMessage());
         }
-
-
     }
 
 }

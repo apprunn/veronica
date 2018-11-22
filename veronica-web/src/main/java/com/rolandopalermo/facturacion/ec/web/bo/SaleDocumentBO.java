@@ -84,13 +84,12 @@ public class SaleDocumentBO {
         int saleDocumentId, 
         String documentCode, 
         byte [] saleXML, 
-        byte [] saleSignedXml, 
-        boolean override) throws NegocioException {
+        byte [] saleSignedXml) throws NegocioException {
         try {
 
             SaleDocument result = saleDocumentRepository.findTopBySaleDocumentIdOrderByVersionDesc(saleDocumentId);
             
-            SaleDocument saleDocument = new SaleDocument();
+            SaleDocument saleDocument;
 
             int version = 1;
 
@@ -101,16 +100,14 @@ public class SaleDocumentBO {
 
                 if (state == SaleDocument.AUTORIZADO) {
                     throw new NegocioException("Este comprobante ya fue autorizado");
+                } else if (state == SaleDocument.ENVIADO) {
+                    throw new NegocioException("Existe un comprobante preparado para autorizar");
                 }
 
-                if (!override) {
-                    if (state == SaleDocument.PENDIENTE) {
-                        throw new NegocioException("Existe un comprobante pendiente, agregue el parametro override = true para sobreescribirlo");
-                    } else if (state == SaleDocument.ENVIADO) {
-                        throw new NegocioException("Existe un comprobante preparado para autorizar, agregue el parametro override = true para sobreescribirlo");
-                    }
-                }
+                saleDocument = result;
 
+            } else {
+                saleDocument = new SaleDocument();
             }
 
             saleDocument.setVersion(version);
