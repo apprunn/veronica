@@ -10,6 +10,7 @@ import com.rolandopalermo.facturacion.ec.web.domain.Company;
 
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -34,6 +35,9 @@ public class RegisterCertificateController {
     @Autowired
     private CompanyBO companyBO;
 
+	@Value("${sales.ruta}")
+    private String baseURL;
+
     @ApiOperation(value = "Registra o actualiza una compañia")
     @PostMapping(value = "/company", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<GenericResponse<String>> registrarCompany(
@@ -42,7 +46,7 @@ public class RegisterCertificateController {
         @RequestBody Certificado certificado
     ) {
         try {
-            boolean success = companyBO.registerCompany(certificado);
+            boolean success = companyBO.registerCompany(certificado, baseURL);
             return new ResponseEntity<GenericResponse<String>>(new GenericResponse<String>("Success: " + success), HttpStatus.OK);
         } catch (Exception e) {
             logger.error(e.getMessage());

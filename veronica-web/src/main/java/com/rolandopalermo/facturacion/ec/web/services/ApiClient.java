@@ -11,6 +11,7 @@ import retrofit2.Callback;
 import retrofit2.Retrofit;
 import retrofit2.converter.gson.GsonConverterFactory;
 import retrofit2.http.Body;
+import retrofit2.http.PATCH;
 import retrofit2.http.POST;
 import retrofit2.http.Path;
 
@@ -44,6 +45,11 @@ public class ApiClient {
         Call<ResponseBody> updateSaleDocuementState(
             @Path("documentId") int documentId, 
             @Path("companyId") int companyId, 
+            @Body Map<String, Object> body);
+
+        @PATCH("subsidiaries-flag-taxes/{ruc}")
+        Call<ResponseBody> updateFlagTaxes(
+            @Path("ruc") String ruc,
             @Body Map<String, Object> body);
 
     }
