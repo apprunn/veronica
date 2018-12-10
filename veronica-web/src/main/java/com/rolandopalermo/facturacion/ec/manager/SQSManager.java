@@ -18,7 +18,6 @@ import com.amazon.sqs.javamessaging.SQSConnectionFactory;
 import com.amazon.sqs.javamessaging.message.SQSMessage;
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.auth.profile.ProfileCredentialsProvider;
-import com.amazonaws.regions.Region;
 import com.amazonaws.regions.Regions;
 import com.amazonaws.services.sqs.AmazonSQS;
 import com.amazonaws.services.sqs.AmazonSQSClientBuilder;
@@ -170,7 +169,7 @@ public class SQSManager {
 
     public void deleteMessage(String messageReceiptHandle) {
 
-        // // Delete a message
+        // Delete a message
         System.out.println("Deleting a message.\n");
         sqs.deleteMessage(queueUrl, messageReceiptHandle);
 

@@ -12,6 +12,7 @@ import com.rolandopalermo.facturacion.ec.modelo.certificado.Certificado;
 import com.rolandopalermo.facturacion.ec.web.domain.Company;
 import com.rolandopalermo.facturacion.ec.web.repositories.CompanyRepository;
 import com.rolandopalermo.facturacion.ec.web.services.ApiClient;
+import com.rolandopalermo.facturacion.ec.web.util.Util;
 
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -57,7 +58,8 @@ public class CompanyBO {
 
             if (result.isEmpty()) {
                 // Create new data
-                company = new Company();
+				company = new Company();
+				company.setCreatedAt(Util.getCurrentDateString());
             } else {
                 // Update company
                 company = result.get(0);
@@ -68,7 +70,8 @@ public class CompanyBO {
             company.setCertificateKey(certificado.getClave());
             company.setRuc(certificado.getRuc());
             company.setCompanyName(certificado.getCompanyName());
-            company.setCompanyId(certificado.getCompanyId());
+			company.setCompanyId(certificado.getCompanyId());
+			company.setUpdatedAt(Util.getCurrentDateString());
 
             companyRepository.save(company);
 
@@ -120,6 +123,7 @@ public class CompanyBO {
         } catch (Exception e) {
             log.error(e.getMessage());
         }
-    }
+	}
+	
 
 }

@@ -20,7 +20,7 @@ import lombok.Setter;
 @Entity(name = "fact_sale_document")
 @Table(uniqueConstraints = @UniqueConstraint(columnNames = {"saleDocumentId", "version"}))
 @JsonIgnoreProperties(value = {"company", "xml"})
-public class SaleDocument {
+public class SaleDocument extends EntityBase {
 
     public static final int PENDIENTE = 1;
     public static final int ENVIADO = 2;
@@ -55,6 +55,8 @@ public class SaleDocument {
 
     @NotNull
     @Column(length = 255)
-    private String publicURL;
+	private String publicURL;
+	
+	private String barcodeClaveAcceso;
 
 }

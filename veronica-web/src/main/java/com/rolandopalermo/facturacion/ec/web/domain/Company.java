@@ -12,7 +12,7 @@ import lombok.Setter;
 @Table(uniqueConstraints = {
     @UniqueConstraint(columnNames = {"ruc"})
 })
-public class Company {
+public class Company extends EntityBase {
     
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
