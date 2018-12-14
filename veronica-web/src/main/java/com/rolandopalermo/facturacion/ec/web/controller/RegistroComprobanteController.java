@@ -116,41 +116,59 @@ public class RegistroComprobanteController {
 	}
 
 	private ResponseEntity<SaleDocument> generarDocumentoElectronico(ComprobanteElectronico request, int saleDocumentId, String documentCode) {
+
+		Company company = obtenerCompany(request.getInfoTributaria().getRuc());
+
+		byte[] content = convertirAXML(request);
+
+		byte[] signedContent = firmarComprobanteElectronico(content, company);
+
+		SaleDocument saleDocument = actualizarSaleDocument(company, request.getInfoTributaria().getClaveAcceso(), saleDocumentId, documentCode, signedContent);
+
+		// Send Message to SQS
+		Map<String, String> message = new HashMap<>();
+
+		message.put("ruc", company.getRuc());
+		message.put("saleDocumentId", String.valueOf(saleDocumentId));
+		message.put("companyId", String.valueOf(company.getCompanyId()));
+
+		String messageGroupId = String.format("group_%d_%d_%d", saleDocument.getId(), company.getCompanyId(), saleDocument.getSaleDocumentId());
+
+		Gson gson = new Gson();
+		String strMessage = gson.toJson(message);
+
+		sqsManager.sendMessage(strMessage, messageGroupId);
+
+		return new ResponseEntity<SaleDocument>(saleDocument, HttpStatus.OK);
+
+	}
+
+	private Company obtenerCompany(String ruc) {
+		// Obtener Company
 		try {
-			byte[] content = generadorBO.generarXMLDocumentoElectronico(request);
-
-			Company company = companyBO.getCompany(request.getInfoTributaria().getRuc());
-
-			byte[] signedContent = firmarComprobanteElectronico(content, company);
-
-			SaleDocument saleDocument = saleDocumentBO.saveSaleDocument(company, request.getInfoTributaria().getClaveAcceso(), saleDocumentId, documentCode, content, signedContent);
-
-			Map<String, String> message = new HashMap<>();
-
-			message.put("ruc", company.getRuc());
-			message.put("saleDocumentId", String.valueOf(saleDocumentId));
-			message.put("companyId", String.valueOf(company.getCompanyId()));
-
-			String messageGroupId = String.format("group_%d_%d_%d", saleDocument.getId(), company.getCompanyId(), saleDocument.getSaleDocumentId());
-
-			Gson gson = new Gson();
-			String strMessage = gson.toJson(message);
-
-			sqsManager.sendMessage(strMessage, messageGroupId);
-
-			return new ResponseEntity<SaleDocument>(saleDocument, HttpStatus.OK);
+			return companyBO.getCompany(ruc);
 		} catch (NegocioException e) {
+			logger.error("Obtener Compañia", e);
+			throw new ResourceNotFoundException("No se encontro compañia");
+		} catch (Exception e) {
 			logger.error("generarDocumentoElectronico", e);
+			throw new InternalServerException(e.getMessage());
+		}
+	}
+
+	private  byte[] convertirAXML(ComprobanteElectronico request) {
+		try {
+			return generadorBO.generarXMLDocumentoElectronico(request);
+		} catch (NegocioException e) {
+			logger.error("Generar XML", e);
 			throw new BadRequestException(e.getMessage());
 		} catch (Exception e) {
 			logger.error("generarDocumentoElectronico", e);
 			throw new InternalServerException(e.getMessage());
 		}
-
 	}
 
-	public byte[] firmarComprobanteElectronico(byte [] request, Company company)
-			throws NegocioException {
+	private byte[] firmarComprobanteElectronico(byte [] request, Company company) {
 
 		if (!new File(company.getCertificatePath()).exists()) {
 			throw new ResourceNotFoundException("No se pudo encontrar el certificado de firma digital.");
@@ -163,6 +181,23 @@ public class RegistroComprobanteController {
 			throw new BadRequestException(e.getMessage());
 		} catch (Exception e) {
 			logger.error("firmarComprobanteElectronico", e);
+			throw new InternalServerException(e.getMessage());
+		}
+	}
+
+	private SaleDocument actualizarSaleDocument(
+		Company company, 
+		String claveAcceso,
+		int saleDocumentId, 
+		String documentCode,
+		byte [] saleSignedXml) {
+		try {
+			return saleDocumentBO.saveSaleDocument(company, claveAcceso, saleDocumentId, documentCode, saleSignedXml);
+		} catch (NegocioException e) {
+			logger.error("generarDocumentoElectronico", e);
+			throw new BadRequestException(e.getMessage());
+		} catch (Exception e) {
+			logger.error("generarDocumentoElectronico", e);
 			throw new InternalServerException(e.getMessage());
 		}
 	}

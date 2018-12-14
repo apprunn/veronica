@@ -168,9 +168,11 @@ public class SQSManager {
     }
 
     class SQSListener implements MessageListener {
-transient
+        
         Gson gson = new Gson();
-        Type type = new TypeToken<Map<String, String>>(){}.getType();
+        Type type = new TypeToken<Map<String, String>>(){
+            private static final long serialVersionUID = 1L;
+        }.getType();
 
         @Override
         public void onMessage(javax.jms.Message message) {

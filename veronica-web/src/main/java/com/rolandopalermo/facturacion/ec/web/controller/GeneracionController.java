@@ -19,6 +19,7 @@ import com.rolandopalermo.facturacion.ec.common.exception.BadRequestException;
 import com.rolandopalermo.facturacion.ec.common.exception.InternalServerException;
 import com.rolandopalermo.facturacion.ec.common.exception.NegocioException;
 import com.rolandopalermo.facturacion.ec.common.exception.ResourceNotFoundException;
+import com.rolandopalermo.facturacion.ec.dto.GenericResponse;
 import com.rolandopalermo.facturacion.ec.modelo.ComprobanteElectronico;
 import com.rolandopalermo.facturacion.ec.modelo.factura.Factura;
 import com.rolandopalermo.facturacion.ec.modelo.guia.GuiaRemision;
@@ -26,9 +27,7 @@ import com.rolandopalermo.facturacion.ec.modelo.notacredito.NotaCredito;
 import com.rolandopalermo.facturacion.ec.modelo.notadebito.NotaDebito;
 import com.rolandopalermo.facturacion.ec.modelo.retencion.ComprobanteRetencion;
 import com.rolandopalermo.facturacion.ec.web.bo.CompanyBO;
-import com.rolandopalermo.facturacion.ec.web.bo.SaleDocumentBO;
 import com.rolandopalermo.facturacion.ec.web.domain.Company;
-import com.rolandopalermo.facturacion.ec.web.domain.SaleDocument;
 
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
@@ -54,12 +53,9 @@ public class GeneracionController {
 	@Autowired
 	private CompanyBO companyBO;
 
-	@Autowired
-	private SaleDocumentBO saleDocumentBO;
-
 	@ApiOperation(value = "Genera y firmar una factura en formato XML")
 	@PostMapping(value = "/factura", produces = MediaType.APPLICATION_JSON_VALUE)
-	public ResponseEntity<SaleDocument> generarFactura(
+	public ResponseEntity<GenericResponse<byte[]>> generarFactura(
 			@Valid
 			@ApiParam(value = API_DOC_ANEXO_1, required = true) 
 			@RequestBody Factura request,
@@ -69,7 +65,7 @@ public class GeneracionController {
 
 	@ApiOperation(value = "Genera y firmar una guía de remisión en formato XML")
 	@PostMapping(value = "/guia-remision", produces = MediaType.APPLICATION_JSON_VALUE)
-	public ResponseEntity<SaleDocument> generarGuiaRemision(
+	public ResponseEntity<GenericResponse<byte[]>> generarGuiaRemision(
 			@Valid
 			@ApiParam(value = API_DOC_ANEXO_1, required = true) 
 			@RequestBody GuiaRemision request,
@@ -79,7 +75,7 @@ public class GeneracionController {
 
 	@ApiOperation(value = "Genera y firmar una nota de crédito en formato XML")
 	@PostMapping(value = "/nota-credito", produces = MediaType.APPLICATION_JSON_VALUE)
-	public ResponseEntity<SaleDocument> generarNotaCredito(
+	public ResponseEntity<GenericResponse<byte[]>> generarNotaCredito(
 			@Valid
 			@ApiParam(value = API_DOC_ANEXO_1, required = true) 
 			@RequestBody NotaCredito request,
@@ -89,7 +85,7 @@ public class GeneracionController {
 
 	@ApiOperation(value = "Genera y firmar una nota de débito en formato XML")
 	@PostMapping(value = "/nota-debito", produces = MediaType.APPLICATION_JSON_VALUE)
-	public ResponseEntity<SaleDocument> generarNotaDebito(
+	public ResponseEntity<GenericResponse<byte[]>> generarNotaDebito(
 			@Valid
 			@ApiParam(value = API_DOC_ANEXO_1, required = true) 
 			@RequestBody NotaDebito request,
@@ -99,7 +95,7 @@ public class GeneracionController {
 
 	@ApiOperation(value = "Genera y firmar un comprobante de retención en formato XML")
 	@PostMapping(value = "/comprobante-retencion", produces = MediaType.APPLICATION_JSON_VALUE)
-	public ResponseEntity<SaleDocument> generarComprobanteRetencion(
+	public ResponseEntity<GenericResponse<byte[]>> generarComprobanteRetencion(
 			@Valid
 			@ApiParam(value = API_DOC_ANEXO_1, required = true) 
 			@RequestBody ComprobanteRetencion request,
@@ -107,7 +103,7 @@ public class GeneracionController {
 		return generarDocumentoElectronico(request, saleDocumentId, "CRT");
 	}
 
-	private ResponseEntity<SaleDocument> generarDocumentoElectronico(ComprobanteElectronico request, int saleDocumentId, String documentCode) {
+	private ResponseEntity<GenericResponse<byte[]>> generarDocumentoElectronico(ComprobanteElectronico request, int saleDocumentId, String documentCode) {
 		try {
 			byte[] content = generadorBO.generarXMLDocumentoElectronico(request);
 
@@ -115,10 +111,10 @@ public class GeneracionController {
 
 			byte[] signedContent = firmarComprobanteElectronico(content, company);
 
-			SaleDocument saleDocument = saleDocumentBO.saveSaleDocument(company, request.getInfoTributaria().getClaveAcceso(), saleDocumentId, documentCode, content, signedContent);
+			// SaleDocument saleDocument = saleDocumentBO.saveSaleDocument(company, request.getInfoTributaria().getClaveAcceso(), saleDocumentId, documentCode, signedContent);
 
 			// FIRMAR DOCUMENTO
-			return new ResponseEntity<SaleDocument>(saleDocument, HttpStatus.OK);
+			return new ResponseEntity<GenericResponse<byte[]>>(new GenericResponse<byte[]>(signedContent), HttpStatus.OK);
 		} catch (NegocioException e) {
 			logger.error("generarDocumentoElectronico", e);
 			throw new BadRequestException(e.getMessage());

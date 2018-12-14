@@ -1,5 +1,7 @@
 package com.rolandopalermo.facturacion.ec.web.domain;
 
+import java.util.Date;
+
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
@@ -7,6 +9,8 @@ import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.ManyToOne;
 import javax.persistence.Table;
+import javax.persistence.Temporal;
+import javax.persistence.TemporalType;
 import javax.persistence.UniqueConstraint;
 import javax.validation.constraints.NotNull;
 
@@ -20,7 +24,7 @@ import lombok.Setter;
 @Entity(name = "fact_sale_document")
 @Table(uniqueConstraints = @UniqueConstraint(columnNames = {"saleDocumentId", "version"}))
 @JsonIgnoreProperties(value = {"company", "xml"})
-public class SaleDocument extends EntityBase {
+public class SaleDocument {
 
     public static final int PENDIENTE = 1;
     public static final int ENVIADO = 2;
@@ -57,6 +61,16 @@ public class SaleDocument extends EntityBase {
     @Column(length = 255)
 	private String publicURL;
 	
-	private String barcodeClaveAcceso;
+    private String barcodeClaveAcceso;
+    
+	@Column(name = "created_at")
+	@Temporal(TemporalType.TIMESTAMP)
+	protected Date createdAt;
+	@Column(name = "updated_at")
+	@Temporal(TemporalType.TIMESTAMP)
+	protected Date updatedAt;
+	@Column(name = "deleted_at")
+	@Temporal(TemporalType.TIMESTAMP)
+	protected Date deletedAt;
 
 }

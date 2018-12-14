@@ -6,6 +6,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.util.Date;
 import java.util.List;
 
 import javax.imageio.ImageIO;
@@ -14,6 +15,7 @@ import com.google.zxing.BarcodeFormat;
 import com.google.zxing.MultiFormatWriter;
 import com.google.zxing.WriterException;
 import com.google.zxing.common.BitMatrix;
+import com.rolandopalermo.facturacion.ec.common.exception.InternalServerException;
 import com.rolandopalermo.facturacion.ec.common.exception.NegocioException;
 import com.rolandopalermo.facturacion.ec.manager.S3Manager;
 import com.rolandopalermo.facturacion.ec.web.domain.Company;
@@ -94,7 +96,6 @@ public class SaleDocumentBO {
         String claveAcceso,
         int saleDocumentId, 
         String documentCode, 
-        byte [] saleXML, 
         byte [] saleSignedXml) throws NegocioException {
         try {
 
@@ -119,7 +120,7 @@ public class SaleDocumentBO {
 
             } else {
 				saleDocument = new SaleDocument();
-				saleDocument.setCreatedAt(Util.getCurrentDateString());
+				saleDocument.setCreatedAt(new Date());
 			}
 			
 
@@ -130,7 +131,7 @@ public class SaleDocumentBO {
             saleDocument.setSaleDocumentId(saleDocumentId);
             saleDocument.setSaleDocumentCode(documentCode);
 			saleDocument.setClaveAcceso(claveAcceso);
-			saleDocument.setUpdatedAt(Util.getCurrentDateString());
+			saleDocument.setUpdatedAt(new Date());
 
             String [] nameXml = S3Manager.getInstance().uploadFile(saleSignedXml, "xml");
             System.out.println(nameXml[0]);
@@ -148,6 +149,9 @@ public class SaleDocumentBO {
 
             return saleDocumentRepository.save(saleDocument);
 
+        } catch (IOException e) {
+            logger.error(e.getMessage());
+            throw new InternalServerException(e.getMessage());
         } catch (Exception e) {
             logger.error(e.getMessage());
             throw new NegocioException(e.getMessage());

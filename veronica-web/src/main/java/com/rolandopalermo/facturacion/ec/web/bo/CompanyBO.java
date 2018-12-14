@@ -3,6 +3,7 @@ package com.rolandopalermo.facturacion.ec.web.bo;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -57,7 +58,7 @@ public class CompanyBO {
             if (company == null) {
                 // Create new data
 				company = new Company();
-				company.setCreatedAt(Util.getCurrentDateString());
+				company.setCreatedAt(new Date());
             }
 
             company.setBranchId(certificado.getBranchId());
@@ -66,7 +67,7 @@ public class CompanyBO {
             company.setRuc(certificado.getRuc());
             company.setCompanyName(certificado.getCompanyName());
 			company.setCompanyId(certificado.getCompanyId());
-			company.setUpdatedAt(Util.getCurrentDateString());
+			company.setUpdatedAt(new Date());
 
             companyRepository.save(company);
 
