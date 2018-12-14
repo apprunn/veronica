@@ -4,7 +4,6 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 import com.rolandopalermo.facturacion.ec.common.exception.NegocioException;
@@ -17,6 +16,7 @@ import com.rolandopalermo.facturacion.ec.web.util.Util;
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 
 import okhttp3.ResponseBody;
@@ -51,18 +51,13 @@ public class CompanyBO {
             oFile.write(certificado.getCertificado());
             oFile.close();
 
-            // Almacenar datos de compañia en la base de datos
-            List<Company> result = companyRepository.findByRuc(certificado.getRuc());
+            // Obtener Datos de compañia
+            Company company = companyRepository.findByRuc(certificado.getRuc());
 
-            Company company;
-
-            if (result.isEmpty()) {
+            if (company == null) {
                 // Create new data
 				company = new Company();
 				company.setCreatedAt(Util.getCurrentDateString());
-            } else {
-                // Update company
-                company = result.get(0);
             }
 
             company.setBranchId(certificado.getBranchId());
@@ -90,12 +85,10 @@ public class CompanyBO {
         return true;
     }
 
+    @Nullable
     public Company getCompany(String ruc) throws NegocioException {
         try {
-            return companyRepository.findByRuc(ruc).get(0);
-        } catch (IndexOutOfBoundsException e) {
-            log.error(e.getMessage());
-            throw new NegocioException("Compañia no encontrada");
+            return companyRepository.findByRuc(ruc);
         } catch (Exception e) {
             log.error(e.getMessage());
             throw new NegocioException(e.getMessage());

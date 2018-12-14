@@ -107,11 +107,6 @@
 			<version>1.0.4</version>
 		</dependency>
 		<dependency>
-			<groupId>org.apache.xmlsec-adsi</groupId>
-			<artifactId>xmlsec-adsi</artifactId>
-			<version>1.4.2</version>
-		</dependency>
-		<dependency>
 			<groupId>com.rolandopalermo.facturacion.ec</groupId>
 			<artifactId>veronica-dto</artifactId>
 			<version>0.0.1-SNAPSHOT</version>

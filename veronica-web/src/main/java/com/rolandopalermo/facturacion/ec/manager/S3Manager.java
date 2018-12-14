@@ -4,7 +4,6 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -20,7 +19,6 @@ import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.amazonaws.services.s3.model.AmazonS3Exception;
 import com.amazonaws.services.s3.model.Bucket;
 import com.amazonaws.services.s3.model.CannedAccessControlList;
-import com.amazonaws.services.s3.model.GeneratePresignedUrlRequest;
 import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.amazonaws.services.s3.model.S3Object;
 import com.amazonaws.services.s3.model.S3ObjectInputStream;
@@ -30,7 +28,6 @@ public class S3Manager {
     private static S3Manager instance = null;
 
     private AmazonS3 s3 = null;
-    private Bucket bucket = null;
 
 	private String bucketName = "sri-quipu";
 
@@ -66,12 +63,9 @@ public class S3Manager {
     }
 
     private void createBucket() {
-        bucket = null;
-        if (s3.doesBucketExistV2(bucketName)) {
-            bucket = getBucket(bucketName);
-        } else {
+        if (!s3.doesBucketExistV2(bucketName)) {
             try {
-                bucket = s3.createBucket(bucketName);
+                s3.createBucket(bucketName);
             } catch (AmazonS3Exception e) {
                 throw new RuntimeException("S3 Error create bucket");
             }

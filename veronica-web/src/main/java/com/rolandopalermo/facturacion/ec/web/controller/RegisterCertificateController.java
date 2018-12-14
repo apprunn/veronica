@@ -3,6 +3,8 @@ package com.rolandopalermo.facturacion.ec.web.controller;
 import javax.validation.Valid;
 
 import com.rolandopalermo.facturacion.ec.common.exception.InternalServerException;
+import com.rolandopalermo.facturacion.ec.common.exception.NegocioException;
+import com.rolandopalermo.facturacion.ec.common.exception.ResourceNotFoundException;
 import com.rolandopalermo.facturacion.ec.dto.GenericResponse;
 import com.rolandopalermo.facturacion.ec.modelo.certificado.Certificado;
 import com.rolandopalermo.facturacion.ec.web.bo.CompanyBO;
@@ -58,15 +60,23 @@ public class RegisterCertificateController {
     @GetMapping(value = "/company", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Company> obtenerCompany(
         @Valid
-        @ApiParam(value = "ID de companñia")
+        @ApiParam(value = "RUC de companñia")
         @RequestParam String ruc
     ) {
         try {
             Company company = companyBO.getCompany(ruc);
+
+            if (company == null) {
+                throw new NegocioException("Este RUC no existe en el sistema");
+            }
+
             return new ResponseEntity<>(company, HttpStatus.OK);
+        } catch (NegocioException e) {
+            logger.error("REGISTER NOT FOUND", e);
+            throw new ResourceNotFoundException(e.getMessage());
         } catch (Exception e) {
-            logger.error(e.getMessage());
-            throw new  InternalServerException(e.getMessage());
+            logger.error("REGISTER ERROR", e);
+            throw new InternalServerException(e.getMessage());
         }
     }
 
