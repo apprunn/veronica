@@ -1,9 +1,7 @@
 package com.rolandopalermo.facturacion.ec.manager;
 
 import java.lang.reflect.Type;
-import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 
 import javax.jms.JMSException;
 import javax.jms.MessageConsumer;
@@ -21,8 +19,6 @@ import com.amazonaws.auth.profile.ProfileCredentialsProvider;
 import com.amazonaws.regions.Regions;
 import com.amazonaws.services.sqs.AmazonSQS;
 import com.amazonaws.services.sqs.AmazonSQSClientBuilder;
-import com.amazonaws.services.sqs.model.Message;
-import com.amazonaws.services.sqs.model.ReceiveMessageRequest;
 import com.amazonaws.services.sqs.model.SendMessageRequest;
 import com.amazonaws.services.sqs.model.SendMessageResult;
 import com.google.common.reflect.TypeToken;
@@ -129,39 +125,39 @@ public class SQSManager {
 
     }
 
-    private List<Message> receiveMessage(boolean log) {
+    // private List<Message> receiveMessage(boolean log) {
 
-        // Receive messages
-        System.out.println("Receiving messages from MyQueue.\n");
-        ReceiveMessageRequest receiveMessageRequest = new ReceiveMessageRequest(queueUrl);
-        List<Message> messages = sqs.receiveMessage(receiveMessageRequest).getMessages();
+    //     // Receive messages
+    //     System.out.println("Receiving messages from MyQueue.\n");
+    //     ReceiveMessageRequest receiveMessageRequest = new ReceiveMessageRequest(queueUrl);
+    //     List<Message> messages = sqs.receiveMessage(receiveMessageRequest).getMessages();
 
-        if (log) {
+    //     if (log) {
 
-            if (messages.isEmpty()) {
-                System.out.print("==============================");
-                System.out.print("No hay mensajes recibidos");
-                System.out.print("==============================");
-            } else {
-                for (Message m : messages) {
-                    System.out.println("  Message");
-                    System.out.println("    MessageId:     " + m.getMessageId());
-                    System.out.println("    ReceiptHandle: " + m.getReceiptHandle());
-                    System.out.println("    MD5OfBody:     " + m.getMD5OfBody());
-                    System.out.println("    Body:          " + m.getBody());
-                    for (Entry<String, String> entry : m.getAttributes().entrySet()) {
-                        System.out.println("  Attribute");
-                        System.out.println("    Name:  " + entry.getKey());
-                        System.out.println("    Value: " + entry.getValue());
-                    }
-                }
-            }
+    //         if (messages.isEmpty()) {
+    //             System.out.print("==============================");
+    //             System.out.print("No hay mensajes recibidos");
+    //             System.out.print("==============================");
+    //         } else {
+    //             for (Message m : messages) {
+    //                 System.out.println("  Message");
+    //                 System.out.println("    MessageId:     " + m.getMessageId());
+    //                 System.out.println("    ReceiptHandle: " + m.getReceiptHandle());
+    //                 System.out.println("    MD5OfBody:     " + m.getMD5OfBody());
+    //                 System.out.println("    Body:          " + m.getBody());
+    //                 for (Entry<String, String> entry : m.getAttributes().entrySet()) {
+    //                     System.out.println("  Attribute");
+    //                     System.out.println("    Name:  " + entry.getKey());
+    //                     System.out.println("    Value: " + entry.getValue());
+    //                 }
+    //             }
+    //         }
 
-            System.out.println();
-        }
+    //         System.out.println();
+    //     }
 
-        return messages;
-    }
+    //     return messages;
+    // }
 
     public void deleteMessage(String messageReceiptHandle) {
 
@@ -172,7 +168,7 @@ public class SQSManager {
     }
 
     class SQSListener implements MessageListener {
-
+transient
         Gson gson = new Gson();
         Type type = new TypeToken<Map<String, String>>(){}.getType();
 
