@@ -2,7 +2,6 @@ package com.rolandopalermo.facturacion.ec.web.bo;
 
 import java.io.IOException;
 import java.io.StringWriter;
-import java.io.UnsupportedEncodingException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;

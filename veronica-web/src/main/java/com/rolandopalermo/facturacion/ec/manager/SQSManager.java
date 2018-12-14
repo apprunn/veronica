@@ -18,7 +18,6 @@ import com.amazon.sqs.javamessaging.SQSConnectionFactory;
 import com.amazon.sqs.javamessaging.message.SQSMessage;
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.auth.profile.ProfileCredentialsProvider;
-import com.amazonaws.regions.Region;
 import com.amazonaws.regions.Regions;
 import com.amazonaws.services.sqs.AmazonSQS;
 import com.amazonaws.services.sqs.AmazonSQSClientBuilder;
@@ -37,10 +36,6 @@ import com.rolandopalermo.facturacion.ec.web.domain.SaleDocument;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-
-import recepcion.ws.sri.gob.ec.Comprobante;
-import recepcion.ws.sri.gob.ec.RespuestaSolicitud;
-import recepcion.ws.sri.gob.ec.RespuestaSolicitud.Comprobantes;
 
 public class SQSManager {
 
