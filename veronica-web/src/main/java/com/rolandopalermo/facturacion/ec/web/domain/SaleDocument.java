@@ -1,5 +1,7 @@
 package com.rolandopalermo.facturacion.ec.web.domain;
 
+import java.util.Date;
+
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
@@ -7,6 +9,8 @@ import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.ManyToOne;
 import javax.persistence.Table;
+import javax.persistence.Temporal;
+import javax.persistence.TemporalType;
 import javax.persistence.UniqueConstraint;
 import javax.validation.constraints.NotNull;
 
@@ -55,6 +59,18 @@ public class SaleDocument {
 
     @NotNull
     @Column(length = 255)
-    private String publicURL;
+	private String publicURL;
+	
+    private String barcodeClaveAcceso;
+    
+	@Column(name = "created_at")
+	@Temporal(TemporalType.TIMESTAMP)
+	protected Date createdAt;
+	@Column(name = "updated_at")
+	@Temporal(TemporalType.TIMESTAMP)
+	protected Date updatedAt;
+	@Column(name = "deleted_at")
+	@Temporal(TemporalType.TIMESTAMP)
+	protected Date deletedAt;
 
 }

@@ -1,9 +1,21 @@
 package com.rolandopalermo.facturacion.ec.web.bo;
 
+import java.awt.Color;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.IOException;
 import java.nio.file.Files;
+import java.util.Date;
 import java.util.List;
 
+import javax.imageio.ImageIO;
+
+import com.google.zxing.BarcodeFormat;
+import com.google.zxing.MultiFormatWriter;
+import com.google.zxing.WriterException;
+import com.google.zxing.common.BitMatrix;
+import com.rolandopalermo.facturacion.ec.common.exception.InternalServerException;
 import com.rolandopalermo.facturacion.ec.common.exception.NegocioException;
 import com.rolandopalermo.facturacion.ec.manager.S3Manager;
 import com.rolandopalermo.facturacion.ec.web.domain.Company;
@@ -17,7 +29,7 @@ import org.springframework.stereotype.Service;
 @Service
 public class SaleDocumentBO {
 
-    private static final Logger log = Logger.getLogger(CompanyBO.class);
+    private static final Logger logger = Logger.getLogger(CompanyBO.class);
     
     @Autowired
     SaleDocumentRepository saleDocumentRepository;
@@ -83,7 +95,6 @@ public class SaleDocumentBO {
         String claveAcceso,
         int saleDocumentId, 
         String documentCode, 
-        byte [] saleXML, 
         byte [] saleSignedXml) throws NegocioException {
         try {
 
@@ -107,8 +118,10 @@ public class SaleDocumentBO {
                 saleDocument = result;
 
             } else {
-                saleDocument = new SaleDocument();
-            }
+				saleDocument = new SaleDocument();
+				saleDocument.setCreatedAt(new Date());
+			}
+			
 
             saleDocument.setVersion(version);
 
@@ -116,21 +129,73 @@ public class SaleDocumentBO {
             saleDocument.setCompany(company);
             saleDocument.setSaleDocumentId(saleDocumentId);
             saleDocument.setSaleDocumentCode(documentCode);
-            saleDocument.setClaveAcceso(claveAcceso);
+			saleDocument.setClaveAcceso(claveAcceso);
+			saleDocument.setUpdatedAt(new Date());
 
-            String [] nameXml = S3Manager.getInstance().uploadFile(saleSignedXml);
+            String [] nameXml = S3Manager.getInstance().uploadFile(saleSignedXml, "xml");
             System.out.println(nameXml[0]);
 
             saleDocument.setS3File(nameXml[0]);
-            saleDocument.setPublicURL(nameXml[1]);
+			saleDocument.setPublicURL(nameXml[1]);
+			
+			byte [] data = generateBarcode(claveAcceso);
+			if (data.length > 0) {
+
+				String [] barcodeFile = S3Manager.getInstance().uploadFile(data, "jpg");
+				saleDocument.setBarcodeClaveAcceso(barcodeFile[1]);
+
+			}
 
             return saleDocumentRepository.save(saleDocument);
 
+        } catch (IOException e) {
+            logger.error(e.getMessage());
+            throw new InternalServerException(e.getMessage());
         } catch (Exception e) {
-            log.error(e.getMessage());
+            logger.error(e.getMessage());
             throw new NegocioException(e.getMessage());
         }
     }
+	private byte[] generateBarcode(String value) {
 
+		int width = 240;
+		int height = 32;
+
+		MultiFormatWriter barcodeWriter = new MultiFormatWriter();
+		BitMatrix barcodeBitMatrix;
+
+		try {
+			barcodeBitMatrix = barcodeWriter.encode(value, BarcodeFormat.CODE_128, width, height);
+		} catch (WriterException e) {
+			logger.error(e.getMessage());
+			return new byte[0];
+		}
+
+		BufferedImage bufferedImage = new BufferedImage(width, height, BufferedImage.TYPE_BYTE_GRAY);
+
+		for (int x = 0; x < width; x++) {
+			for (int y = 0; y < height; y++) {
+				int color = barcodeBitMatrix.get(x, y) ? Color.BLACK.getRGB() : Color.WHITE.getRGB();
+				bufferedImage.setRGB(x, y, color);
+			}
+		}
+
+		try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+
+			ImageIO.write(bufferedImage, "jpg", baos);
+			baos.flush();
+	
+			byte [] imageInByte = baos.toByteArray();
+
+			return imageInByte;
+
+		} catch (IOException e) {
+			logger.error(e.getMessage());
+		} 
+
+		return new byte[0];
+
+
+	}
 
 }

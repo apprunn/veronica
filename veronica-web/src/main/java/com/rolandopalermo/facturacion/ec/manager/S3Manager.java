@@ -83,11 +83,11 @@ public class S3Manager {
         return named_bucket;
     }
 
-    public String [] uploadFile(byte [] data) throws AmazonServiceException, IOException {
+    public String [] uploadFile(byte [] data, String format) throws AmazonServiceException, IOException {
 
 		String nombreArchivoXML = UUID.randomUUID().toString();
 
-        File tempFile = File.createTempFile(nombreArchivoXML, ".xml", null);
+        File tempFile = File.createTempFile(nombreArchivoXML, "." + format, null);
         FileOutputStream fos = new FileOutputStream(tempFile);
         fos.write(data);
         fos.close();

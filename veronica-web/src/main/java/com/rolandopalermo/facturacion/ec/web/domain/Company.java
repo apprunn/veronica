@@ -1,5 +1,7 @@
 package com.rolandopalermo.facturacion.ec.web.domain;
 
+import java.util.Date;
+
 import javax.persistence.*;
 import javax.validation.constraints.NotNull;
 
@@ -29,5 +31,14 @@ public class Company {
     protected String ruc;
     @NotNull
     protected Integer branchId;
-
+    
+	@Column(name = "created_at")
+	@Temporal(TemporalType.TIMESTAMP)
+	protected Date createdAt;
+	@Column(name = "updated_at")
+	@Temporal(TemporalType.TIMESTAMP)
+	protected Date updatedAt;
+	@Column(name = "deleted_at")
+	@Temporal(TemporalType.TIMESTAMP)
+	protected Date deletedAt;
 }

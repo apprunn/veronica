@@ -78,7 +78,6 @@ public class SQSManager {
 							.withRegion(Regions.US_EAST_1)
                             .build();
                             
-
         queueUrl = sqs.getQueueUrl("sri-dev.fifo").getQueueUrl();
 
         try {
@@ -161,16 +160,18 @@ public class SQSManager {
 
     public void deleteMessage(String messageReceiptHandle) {
 
-        // // Delete a message
+        // Delete a message
         System.out.println("Deleting a message.\n");
         sqs.deleteMessage(queueUrl, messageReceiptHandle);
 
     }
 
     class SQSListener implements MessageListener {
-transient
+        
         Gson gson = new Gson();
-        Type type = new TypeToken<Map<String, String>>(){}.getType();
+        Type type = new TypeToken<Map<String, String>>(){
+            private static final long serialVersionUID = 1L;
+        }.getType();
 
         @Override
         public void onMessage(javax.jms.Message message) {

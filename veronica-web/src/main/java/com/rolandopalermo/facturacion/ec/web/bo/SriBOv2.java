@@ -2,6 +2,8 @@ package com.rolandopalermo.facturacion.ec.web.bo;
 
 import java.io.IOException;
 import java.io.StringWriter;
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -9,6 +11,7 @@ import java.util.Map;
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
 import javax.xml.bind.Marshaller;
+import javax.xml.datatype.XMLGregorianCalendar;
 
 import com.amazonaws.AmazonServiceException;
 import com.rolandopalermo.facturacion.ec.bo.SriBO;
@@ -71,7 +74,7 @@ public class SriBOv2 {
             String mensaje = respuestaSolicitud.getComprobantes().getComprobante().get(0).getMensajes().getMensaje().get(0).getMensaje();
             String aditional = respuestaSolicitud.getComprobantes().getComprobante().get(0).getMensajes().getMensaje().get(0).getInformacionAdicional();
 
-            actualizarDocumentoSale(urlBase, saleDocument, 5, mensaje);
+            actualizarDocumentoSale(urlBase, saleDocument, 5, mensaje + "\n" + aditional);
 
             logger.error(saleDocument.getSaleDocumentId());
             logger.error(mensaje);
@@ -116,17 +119,32 @@ public class SriBOv2 {
                 xmlString = xmlString.replace("&lt;", "<").replace("&gt;", ">").replace("<?xml version=\"1.0\" encoding=\"UTF-8\"?>", "");
                 byte [] data = xmlString.getBytes("utf-8");
 
-                String [] name = S3Manager.getInstance().uploadFile(data);
+                String [] name = S3Manager.getInstance().uploadFile(data, "xml");
 
                 System.out.println("DOCUMENT FUE ALMACENADO");
 
                 saleDocument.setS3File(name[0]);
-                saleDocument.setPublicURL(name[1]);
+				saleDocument.setPublicURL(name[1]);
+				
+				XMLGregorianCalendar autorizationDate = autorizacion.getFechaAutorizacion();
+				Calendar calendar = autorizationDate.toGregorianCalendar();
 
-                actualizarDocumentoSale(urlBase, saleDocument, 7, "EXITO");
+				SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+				formatter.setTimeZone(calendar.getTimeZone());
+				String dateString = formatter.format(calendar.getTime());
+
+                actualizarDocumentoSale(
+					urlBase, 
+					saleDocument, 
+					7, 
+					"EXITO", 
+					autorizacion.getNumeroAutorizacion(), 
+					dateString,
+					autorizacion.getAmbiente(), 
+					saleDocument.getBarcodeClaveAcceso());
 
             } else {
-                // TODO REVISAR ESTE ESPACIO
+				
                 List<autorizacion.ws.sri.gob.ec.Mensaje> messages = autorizacion.getMensajes().getMensaje();
 
                 String strMessage = "";
@@ -158,20 +176,55 @@ public class SriBOv2 {
         saleDocumentBO.updateSaleDocument(saleDocument);
 
         return respuestaComprobante;
-    }
-
-    public void actualizarDocumentoSale(String urlBase, SaleDocument saleDocument, int state, String message) {
-
+	}
+	
+    private void actualizarDocumentoSale(String urlBase, SaleDocument saleDocument, int state, String message) {
+		
         Map<String, Object> body = new HashMap<>();
         body.put("stateDocument", state);
         // Null keys
         body.put("msgSri", message);
         body.put("urlXml", saleDocument.getPublicURL());
-        body.put("typeDocumentCode", saleDocument.getSaleDocumentCode());
+		body.put("typeDocumentCode", saleDocument.getSaleDocumentCode());
+		body.put("password", saleDocument.getClaveAcceso());
+		body.put("emission", "normal");
+		
+		actualizarDocumentoSale(urlBase, saleDocument.getCompany().getCompanyId(), saleDocument.getSaleDocumentId(), body);
+
+	}
+
+	private void actualizarDocumentoSale(
+		String urlBase, 
+		SaleDocument saleDocument, 
+		int state, 
+		String message, 
+		String numAutorization, 
+		String dateAutorization,
+		String enviroment,
+		String barcodeAutorizationUrl) {
+		
+        Map<String, Object> body = new HashMap<>();
+        body.put("stateDocument", state);
+        // Null keys
+        body.put("msgSri", message);
+        body.put("urlXml", saleDocument.getPublicURL());
+		body.put("typeDocumentCode", saleDocument.getSaleDocumentCode());
+
+        body.put("authorizationNumber", numAutorization);
+        body.put("authorizationDate", dateAutorization);
+		body.put("environment", enviroment);
+		body.put("urlPassword", barcodeAutorizationUrl);
+		
+		actualizarDocumentoSale(urlBase, saleDocument.getCompany().getCompanyId(), saleDocument.getSaleDocumentId(), body);
+
+	}
+
+    private void actualizarDocumentoSale(String urlBase, int companyId, int saleDocumentId, Map<String, Object> body) {
+
 
         try {
             Response<ResponseBody> response = ApiClient.getSaleApi(urlBase)
-                            .updateSaleDocuementState(saleDocument.getSaleDocumentId(), saleDocument.getCompany().getCompanyId(), body)
+                            .updateSaleDocuementState(saleDocumentId, companyId, body)
                             .execute();
 
             if (response.isSuccessful()) {
@@ -185,6 +238,6 @@ public class SriBOv2 {
         } catch (Exception e) {
             logger.error(e.getMessage());
         }
-    }
+	}
 
 }
