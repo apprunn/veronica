@@ -74,7 +74,7 @@ public class SriBOv2 {
             String mensaje = respuestaSolicitud.getComprobantes().getComprobante().get(0).getMensajes().getMensaje().get(0).getMensaje();
             String aditional = respuestaSolicitud.getComprobantes().getComprobante().get(0).getMensajes().getMensaje().get(0).getInformacionAdicional();
 
-            actualizarDocumentoSale(urlBase, saleDocument, 5, mensaje);
+            actualizarDocumentoSale(urlBase, saleDocument, 5, mensaje + "\n" + aditional);
 
             logger.error(saleDocument.getSaleDocumentId());
             logger.error(mensaje);

@@ -21,7 +21,6 @@ import com.rolandopalermo.facturacion.ec.manager.S3Manager;
 import com.rolandopalermo.facturacion.ec.web.domain.Company;
 import com.rolandopalermo.facturacion.ec.web.domain.SaleDocument;
 import com.rolandopalermo.facturacion.ec.web.repositories.SaleDocumentRepository;
-import com.rolandopalermo.facturacion.ec.web.util.Util;
 
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;

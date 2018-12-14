@@ -78,7 +78,6 @@ public class SQSManager {
 							.withRegion(Regions.US_EAST_1)
                             .build();
                             
-
         queueUrl = sqs.getQueueUrl("sri-dev.fifo").getQueueUrl();
 
         try {

@@ -12,7 +12,6 @@ import com.rolandopalermo.facturacion.ec.modelo.certificado.Certificado;
 import com.rolandopalermo.facturacion.ec.web.domain.Company;
 import com.rolandopalermo.facturacion.ec.web.repositories.CompanyRepository;
 import com.rolandopalermo.facturacion.ec.web.services.ApiClient;
-import com.rolandopalermo.facturacion.ec.web.util.Util;
 
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
