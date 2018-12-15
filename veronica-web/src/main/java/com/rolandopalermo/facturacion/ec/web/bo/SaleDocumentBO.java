@@ -44,7 +44,7 @@ public class SaleDocumentBO {
 
     public SaleDocument getLastSaleDocumentByDocumentId(int saleDocumentId) throws NegocioException {
         try {
-            return saleDocumentRepository.findTopBySaleDocumentIdOrderByVersionDesc(saleDocumentId);
+            return saleDocumentRepository.findTopBySaleDocumentId(saleDocumentId);
         } catch (IndexOutOfBoundsException e) {
             throw new NegocioException("Comprobante electronico no registrado");
         } catch (Exception e) {
@@ -54,7 +54,7 @@ public class SaleDocumentBO {
 
     public SaleDocument getLastSaleDocumentByClaveAcceso(String claveAcceso) throws NegocioException {
         try {
-            return saleDocumentRepository.findTopByClaveAccesoOrderByVersionDesc(claveAcceso);
+            return saleDocumentRepository.findTopByClaveAcceso(claveAcceso);
         } catch (IndexOutOfBoundsException e) {
             throw new NegocioException("Comprobante electronico no registrado");
         } catch (Exception e) {
@@ -98,7 +98,7 @@ public class SaleDocumentBO {
         byte [] saleSignedXml) throws NegocioException {
         try {
 
-            SaleDocument result = saleDocumentRepository.findTopBySaleDocumentIdOrderByVersionDesc(saleDocumentId);
+            SaleDocument result = saleDocumentRepository.findTopBySaleDocumentId(saleDocumentId);
             
             SaleDocument saleDocument;
 
