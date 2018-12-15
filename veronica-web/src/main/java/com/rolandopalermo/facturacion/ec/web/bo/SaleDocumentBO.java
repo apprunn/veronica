@@ -128,6 +128,7 @@ public class SaleDocumentBO {
             // Save in database
             saleDocument.setCompany(company);
             saleDocument.setSaleDocumentId(saleDocumentId);
+            saleDocument.setSaleDocumentState(SaleDocument.PENDIENTE);
             saleDocument.setSaleDocumentCode(documentCode);
 			saleDocument.setClaveAcceso(claveAcceso);
 			saleDocument.setUpdatedAt(new Date());
