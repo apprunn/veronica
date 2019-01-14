@@ -58,6 +58,7 @@ Change the content with appropriate values, according with your configuration.
 ```bash
 $ cd veronica-web
 $ mvn spring-boot:run
+$ mvn clean package
 ```
 
 ## Documentation

@@ -16,6 +16,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -40,6 +41,7 @@ public class RegisterCertificateController {
 	@Value("${sales.ruta}")
     private String baseURL;
 
+    @CrossOrigin(origins = "*")
     @ApiOperation(value = "Registra o actualiza una compañia")
     @PostMapping(value = "/company", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<GenericResponse<String>> registrarCompany(
@@ -65,6 +67,8 @@ public class RegisterCertificateController {
     ) {
         try {
             Company company = companyBO.getCompany(ruc);
+
+            logger.debug("Buscar compania: " + ruc);
 
             if (company == null) {
                 throw new NegocioException("Este RUC no existe en el sistema");

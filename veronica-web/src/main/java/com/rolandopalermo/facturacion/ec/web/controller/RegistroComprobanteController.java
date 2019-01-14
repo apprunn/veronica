@@ -2,6 +2,7 @@ package com.rolandopalermo.facturacion.ec.web.controller;
 
 import javax.annotation.Resource;
 import javax.validation.Valid;
+import javax.validation.constraints.NotNull;
 
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -72,6 +73,8 @@ public class RegistroComprobanteController {
 			@ApiParam(value = API_DOC_ANEXO_1, required = true) 
 			@RequestBody Factura request,
 			@RequestParam int saleDocumentId) {
+		
+		logger.debug("Factura: SaleDocument - " + saleDocumentId);
 		return generarDocumentoElectronico(request, saleDocumentId, "FAC");
 	}
 
@@ -82,6 +85,8 @@ public class RegistroComprobanteController {
 			@ApiParam(value = API_DOC_ANEXO_1, required = true) 
 			@RequestBody GuiaRemision request,
 			@RequestParam int saleDocumentId) {
+		
+		logger.debug("Guia de remision: SaleDocument - " + saleDocumentId);
 		return generarDocumentoElectronico(request, saleDocumentId, "GRM");
 	}
 
@@ -92,6 +97,8 @@ public class RegistroComprobanteController {
 			@ApiParam(value = API_DOC_ANEXO_1, required = true) 
 			@RequestBody NotaCredito request,
 			@RequestParam int saleDocumentId) {
+
+		logger.debug("Nota de credito: SaleDocument - " + saleDocumentId);
 		return generarDocumentoElectronico(request, saleDocumentId, "NTC");
 	}
 
@@ -102,6 +109,9 @@ public class RegistroComprobanteController {
 			@ApiParam(value = API_DOC_ANEXO_1, required = true) 
 			@RequestBody NotaDebito request,
 			@RequestParam int saleDocumentId) {
+			
+		
+		logger.debug("Nota de debito: SaleDocument - " + saleDocumentId);
 		return generarDocumentoElectronico(request, saleDocumentId, "NTD");
 	}
 
@@ -112,6 +122,8 @@ public class RegistroComprobanteController {
 			@ApiParam(value = API_DOC_ANEXO_1, required = true) 
 			@RequestBody ComprobanteRetencion request,
 			@RequestParam int saleDocumentId) {
+
+		logger.debug("Comprobante de remision: SaleDocument - " + saleDocumentId);
 		return generarDocumentoElectronico(request, saleDocumentId, "CRT");
 	}
 
@@ -121,9 +133,15 @@ public class RegistroComprobanteController {
 
 		byte[] content = convertirAXML(request);
 
+		logger.debug("Formato correcto: saleDocument: " + saleDocumentId);
+
 		byte[] signedContent = firmarComprobanteElectronico(content, company);
 
+		logger.debug("Firma exitosa: SaleDocument: " + saleDocumentId);
+
 		SaleDocument saleDocument = actualizarSaleDocument(company, request.getInfoTributaria().getClaveAcceso(), saleDocumentId, documentCode, signedContent);
+
+		logger.debug("Actualizacion correcta: SaleDocument: " + saleDocumentId);
 
 		// Send Message to SQS
 		Map<String, String> message = new HashMap<>();
@@ -139,14 +157,23 @@ public class RegistroComprobanteController {
 
 		sqsManager.sendMessage(strMessage, messageGroupId);
 
+		logger.debug("Se envio el documento al SQS: SaleDocument: " + saleDocumentId);
+
 		return new ResponseEntity<SaleDocument>(saleDocument, HttpStatus.OK);
 
 	}
 
+	@NotNull
 	private Company obtenerCompany(String ruc) {
 		// Obtener Company
 		try {
-			return companyBO.getCompany(ruc);
+			Company company = companyBO.getCompany(ruc);
+
+			if (company == null) {
+				throw new NegocioException("No se encontro compañia");
+			}
+
+			return company;
 		} catch (NegocioException e) {
 			logger.error("Obtener Compañia", e);
 			throw new ResourceNotFoundException("No se encontro compañia");

@@ -30,10 +30,13 @@ import com.rolandopalermo.facturacion.ec.web.bo.SaleDocumentBO;
 import com.rolandopalermo.facturacion.ec.web.bo.SriBOv2;
 import com.rolandopalermo.facturacion.ec.web.domain.SaleDocument;
 
+import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 
 public class SQSManager {
+
+	private static final Logger logger = Logger.getLogger(SQSManager.class);
 
     private AmazonSQS sqs = null;
 
@@ -118,11 +121,7 @@ public class SQSManager {
         sendMessageRequest.setMessageDeduplicationId(messageGroupId + ".fifo");
         return sqs.sendMessage(sendMessageRequest);
 
-        // LOG
-        // receiveMessage(true);
-        
-
-    }
+    } 
 
     // private List<Message> receiveMessage(boolean log) {
 
@@ -178,8 +177,8 @@ public class SQSManager {
 
             try {
 
-                System.out.println("Received: " + ((TextMessage) message).getText());
-                System.out.println("RECEIPT: " + ((SQSMessage) message).getReceiptHandle() );
+                logger.debug("Received: " + ((TextMessage) message).getText());
+                logger.debug("RECEIPT: " + ((SQSMessage) message).getReceiptHandle() );
 
                 String body = ((TextMessage) message).getText();
 
@@ -196,23 +195,28 @@ public class SQSManager {
                 
                 sriBo.enviarDocumento(request, wsdlRecepcion, urlBase);
 
+                logger.debug("SaleDocument enviado: " + saleDocumentId);
+
                 autorizar(saleDocument.getClaveAcceso());
 
                 String receiptHandle = ((SQSMessage) message).getReceiptHandle();
                 deleteMessage(receiptHandle);
 
+                logger.debug("SaleDocument autentificado: " + saleDocumentId);
+
             } catch (NegocioException e) {
+
+                logger.error(e.getMessage());
 
                 if (e.getCode() == SaleDocument.INCORRECTO) {
                     // ACTUALIZAR EStADO DE DOCUMENTO
-                    System.out.println("EL DOCUMENTO FUE DEVUELTO");
                     String receiptHandle = ((SQSMessage) message).getReceiptHandle();
                     deleteMessage(receiptHandle);
                 }
 
             } catch (Exception e) {
                 e.printStackTrace();
-                System.out.println("EL DOCUMENTO NO LLEGO A SU DESTINO");
+                logger.error("EL DOCUMENTO NO LLEGO A SU DESTINO");
             }
 
         }
@@ -224,7 +228,7 @@ public class SQSManager {
                 sriBo.autorizar(request, wsdlAutorizacion, urlBase);
             } catch (Exception e) {
                 // INICIAR SEGUNDA COLA
-                System.out.println("EL DOCUMENTO NO AUTORIZADO");
+                logger.error("EL DOCUMENTO NO AUTORIZADO: " + claveAcceso);
             }
         }
     }
