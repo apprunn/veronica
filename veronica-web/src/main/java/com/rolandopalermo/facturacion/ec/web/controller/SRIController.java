@@ -67,7 +67,26 @@ public class SRIController {
 	private String wsdlAutorizacion;
 
 	@Value("${sales.ruta}")
-    private String baseURL;
+	private String baseURL;
+	
+    /*
+
+    Rutas de servicios de entornos de prueba
+    o produccion.
+
+    */
+
+	@Value("${sri.soap.recepcion.wsdl.test}")
+    private String wsdlReceptionTest;
+    
+	@Value("${sri.soap.recepcion.wsdl.production}")
+	private String wsdlReceptionProduction;
+	
+	@Value("${sri.soap.autorizacion.wsdl.test}")
+    private String wsdlAuthorizationTest;
+    
+	@Value("${sri.soap.autorizacion.wsdl.production}")
+    private String wsdlAuthorizationProduction;
 
 	@ApiOperation(value = "Envía un comprobante electrónico a validar al SRI")
 	@PostMapping(value = "/enviar", produces = MediaType.APPLICATION_JSON_VALUE)

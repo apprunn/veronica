@@ -40,5 +40,8 @@ public class Company {
 	protected Date updatedAt;
 	@Column(name = "deleted_at")
 	@Temporal(TemporalType.TIMESTAMP)
-	protected Date deletedAt;
+    protected Date deletedAt;
+    
+    @Column(name = "flag_environment")
+    protected Integer flagEnvironment;
 }

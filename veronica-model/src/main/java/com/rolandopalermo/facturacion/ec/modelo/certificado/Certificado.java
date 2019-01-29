@@ -9,19 +9,21 @@ import lombok.Setter;
 @Setter
 public class Certificado {
 
-    @NotEmpty
     protected byte[] certificado;
     
-    @NotEmpty 
     protected String clave;
 
     protected int companyId;
 
     protected int branchId;
 
-    @NotEmpty
     protected String companyName;
 
     @NotEmpty
     protected String ruc;
+
+    @NotEmpty // Flag environment must be not Empty because int variable take 0
+    protected int flagEnvironment;
+
+
 }

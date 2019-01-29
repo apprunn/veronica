@@ -26,8 +26,10 @@ import com.google.gson.Gson;
 import com.rolandopalermo.facturacion.ec.common.exception.NegocioException;
 import com.rolandopalermo.facturacion.ec.dto.AutorizacionRequestDTO;
 import com.rolandopalermo.facturacion.ec.dto.ReceptionStorageDTO;
+import com.rolandopalermo.facturacion.ec.web.bo.CompanyBO;
 import com.rolandopalermo.facturacion.ec.web.bo.SaleDocumentBO;
 import com.rolandopalermo.facturacion.ec.web.bo.SriBOv2;
+import com.rolandopalermo.facturacion.ec.web.domain.Company;
 import com.rolandopalermo.facturacion.ec.web.domain.SaleDocument;
 
 import org.apache.log4j.Logger;
@@ -44,11 +46,11 @@ public class SQSManager {
 
     private SQSConnection connection;
 
-	@Value("${sri.wsdl.recepcion}")
-	private String wsdlRecepcion;
+	// @Value("${sri.wsdl.recepcion}")
+	// private String wsdlRecepcion;
 
-	@Value("${sri.wsdl.autorizacion}")
-    private String wsdlAutorizacion;
+	// @Value("${sri.wsdl.autorizacion}")
+    // private String wsdlAutorizacion;
 
     @Value("${sales.ruta}")
     private String urlBase;
@@ -58,6 +60,28 @@ public class SQSManager {
 
     @Autowired
     private SaleDocumentBO saleDocumentBO;
+
+    @Autowired
+    private CompanyBO companyBO;
+
+    /*
+
+    Rutas de servicios de entornos de prueba
+    o produccion.
+
+    */
+
+	@Value("${sri.soap.recepcion.wsdl.test}")
+    private String wsdlReceptionTest;
+    
+	@Value("${sri.soap.recepcion.wsdl.production}")
+    private String wsdlReceptionProduction;
+
+	@Value("${sri.soap.autorizacion.wsdl.test}")
+    private String wsdlAuthorizationTest;
+    
+	@Value("${sri.soap.autorizacion.wsdl.production}")
+    private String wsdlAuthorizationProduction;
 
     public SQSManager() {
         initialize();
@@ -180,26 +204,51 @@ public class SQSManager {
                 logger.debug("Received: " + ((TextMessage) message).getText());
                 logger.debug("RECEIPT: " + ((SQSMessage) message).getReceiptHandle() );
 
+                // 1. GET MESSAGE DATA
                 String body = ((TextMessage) message).getText();
+                String receiptHandle = ((SQSMessage) message).getReceiptHandle();
 
+                // 2. PARSE DATA
                 Map<String, String> data = gson.fromJson(body, type);
 
-                ReceptionStorageDTO request = new ReceptionStorageDTO();
-                request.setRuc(data.get("ruc"));
-
                 int saleDocumentId = Integer.parseInt(data.get("saleDocumentId"));
-
+                String ruc = data.get("ruc");
+                
+                Company company = companyBO.getCompany(ruc);
                 SaleDocument saleDocument = saleDocumentBO.getLastSaleDocumentByDocumentId(saleDocumentId);
 
-                request.setSaleDocumentId(saleDocumentId);
-                
-                sriBo.enviarDocumento(request, wsdlRecepcion, urlBase);
+                // 3. VALIDATE SALE DOCUMENTE EXIST
+                if (saleDocument == null) {
 
+                    deleteMessage(receiptHandle);
+                    logger.error("SALE DOCUMENT " + saleDocumentId + " NOT REGISTER");
+                    throw new NegocioException("SALE DOCUMENT " + saleDocumentId + " NOT REGISTER");
+                
+                }
+
+                // 4. VALIDATE IF COMPANY WAS REGISTERED
+                if (company == null) {
+
+                    saleDocument.setSaleDocumentState(SaleDocument.INCORRECTO);
+                    saleDocumentBO.updateSaleDocument(saleDocument);
+                    sriBo.actualizarDocumentoSale(urlBase, saleDocument, 1, "Compañia no registrada");
+
+                    deleteMessage(receiptHandle);
+                    logger.error("La compañia " + ruc + " no registrada");
+                    throw new NegocioException("La compañia " + ruc + " no registrada");
+
+                }
+
+                // 5. SEND XML DOCUMENTS TO SRI SYSTEM
+                String wsdlRecepcion = company.getFlagEnvironment() == 0 ? wsdlReceptionTest : wsdlReceptionProduction;
+                sriBo.enviarDocumento(saleDocument, wsdlRecepcion, urlBase);
                 logger.debug("SaleDocument enviado: " + saleDocumentId);
 
-                autorizar(saleDocument.getClaveAcceso());
+                // 6. READ RESPONSE FROM SRI IF XML DOCUMENT WAS CORRECT
+                String wsdlAutorizacion = company.getFlagEnvironment() == 0 ? wsdlAuthorizationTest : wsdlAuthorizationProduction;
+                sriBo.autorizar(saleDocument, wsdlAutorizacion, urlBase);
 
-                String receiptHandle = ((SQSMessage) message).getReceiptHandle();
+                // 7. DELETE MESSAGA FROM QUEUE
                 deleteMessage(receiptHandle);
 
                 logger.debug("SaleDocument autentificado: " + saleDocumentId);
@@ -209,7 +258,7 @@ public class SQSManager {
                 logger.error(e.getMessage());
 
                 if (e.getCode() == SaleDocument.INCORRECTO) {
-                    // ACTUALIZAR EStADO DE DOCUMENTO
+                    // X.1. ACTUALIZAR ESTADO DE DOCUMENTO FALLIDO
                     String receiptHandle = ((SQSMessage) message).getReceiptHandle();
                     deleteMessage(receiptHandle);
                 }
@@ -221,7 +270,7 @@ public class SQSManager {
 
         }
 
-        private void autorizar(String claveAcceso) {
+        private void autorizar(String claveAcceso, String wsdlAutorizacion) {
             try {
                 AutorizacionRequestDTO request = new AutorizacionRequestDTO();
                 request.setClaveAcceso(claveAcceso);

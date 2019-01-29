@@ -34,38 +34,91 @@ public class CompanyBO {
 
         try {
 
-            // Almacenar p12 en un archivo
-            String directory = "certificates/" + certificado.getRuc();
-            String fileName = "certicate.p12";
-
-            // Crear directorios
-            new File(directory).mkdirs();
-
-            String path = directory + "/" + fileName;
-
-            File file = new File(path);
-
-            file.createNewFile();
-
-            FileOutputStream oFile = new FileOutputStream(file, false);
-            oFile.write(certificado.getCertificado());
-            oFile.close();
-
             // Obtener Datos de compañia
             Company company = companyRepository.findByRuc(certificado.getRuc());
 
             if (company == null) {
                 // Create new data
 				company = new Company();
-				company.setCreatedAt(new Date());
+                company.setCreatedAt(new Date());
+                
+                // Validar que todos los datos existan
+
+                String errorMessage = "";
+                String format = "Se requiere %s para crear una compañia\n";
+
+                if (certificado.getCompanyId() == 0) {
+                    errorMessage += String.format(format, "Identificador de compañia");
+                }
+
+                if (certificado.getCompanyName() == null || certificado.getCompanyName().isEmpty()) {
+                    errorMessage += String.format(format, "Nombre de compañia");
+                }
+                
+                if (certificado.getBranchId() == 0) {
+                    errorMessage += String.format(format, "Identificador de sucursal");
+                }
+
+                if (certificado.getCertificado() == null || certificado.getCertificado().length == 0) {
+                    errorMessage += String.format(format, "Certificado");
+                }
+
+                if (certificado.getClave() == null || certificado.getClave().isEmpty()) {
+                    errorMessage += String.format(format, "Clave de certificado");
+                }
+
+                if (!errorMessage.isEmpty()) {
+                    throw new NegocioException(errorMessage);
+                }
+
             }
 
-            company.setBranchId(certificado.getBranchId());
-            company.setCertificatePath(path);
-            company.setCertificateKey(certificado.getClave());
-            company.setRuc(certificado.getRuc());
-            company.setCompanyName(certificado.getCompanyName());
-			company.setCompanyId(certificado.getCompanyId());
+            if (certificado.getCertificado() != null && certificado.getCertificado().length > 0) {
+
+                // Almacenar p12 en un archivo
+                String directory = "certificates/" + certificado.getRuc();
+                String fileName = "certicate.p12";
+
+                // Crear directorios
+                new File(directory).mkdirs();
+
+                String path = directory + "/" + fileName;
+
+                File file = new File(path);
+
+                file.createNewFile();
+
+                FileOutputStream oFile = new FileOutputStream(file, false);
+                oFile.write(certificado.getCertificado());
+                oFile.close();
+
+                company.setCertificatePath(path);
+            }
+
+            // Escribir campos de modelo
+
+            if (certificado.getBranchId() > 0) {
+                company.setBranchId(certificado.getBranchId());
+            }
+
+            if (certificado.getClave() != null && !certificado.getClave().isEmpty()) {
+                company.setCertificateKey(certificado.getClave());
+            }
+
+            if (certificado.getRuc() != null && !certificado.getRuc().isEmpty()) {
+                company.setRuc(certificado.getRuc());
+            }
+
+            if (certificado.getCompanyName() != null && !certificado.getCompanyName().isEmpty()) {
+                company.setCompanyName(certificado.getCompanyName());
+            }
+            
+            if (certificado.getCompanyId() > 0) {
+                company.setCompanyId(certificado.getCompanyId());
+            }
+
+            company.setFlagEnvironment(certificado.getFlagEnvironment());
+
 			company.setUpdatedAt(new Date());
 
             companyRepository.save(company);
@@ -95,6 +148,7 @@ public class CompanyBO {
         }
     }
 
+    // TODO: Requiere hacer rollback en caso de que falle
     public void updateSubisidiaryFlagTaxes(String urlBase, String ruc, int flagTaxes) {
 
         Map<String, Object> body = new HashMap<>();

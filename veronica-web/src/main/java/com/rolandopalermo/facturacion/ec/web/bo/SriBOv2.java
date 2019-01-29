@@ -45,9 +45,68 @@ public class SriBOv2 {
     @Autowired
     SaleDocumentBO saleDocumentBO;
 
-    public RespuestaSolicitud enviarDocumento(ReceptionStorageDTO request, String wsdlRecepcion, String urlBase) throws NegocioException {
-        SaleDocument saleDocument = saleDocumentBO.getLastSaleDocumentByDocumentId(request.getSaleDocumentId());
+    public RespuestaSolicitud enviarDocumento(SaleDocument saleDocument, String wsdlRecepcion, String urlBase) throws NegocioException {
 
+        // 1. VALIDATE IF SALE DOCUMENT STATE IS RIGHT
+        switch (saleDocument.getSaleDocumentState()) {
+            case SaleDocument.INCORRECTO:
+            throw new NegocioException("El documento es incorrecto, subir uno nuevo", SaleDocument.INCORRECTO);
+            case SaleDocument.ENVIADO:
+            throw new NegocioException("El documento ya fue enviado", SaleDocument.ENVIADO);
+            case SaleDocument.AUTORIZADO:
+            throw new NegocioException("El documento ya fue autorizado", SaleDocument.AUTORIZADO);
+        }
+
+        // 2. RETRIEVE XML DOCUMENT
+        byte [] contenido = S3Manager.getInstance().downloadFile(saleDocument.getS3File());
+
+        // 3. SEND XML DOCUMENT
+        RespuestaSolicitud respuestaSolicitud = sriBO.enviarComprobante(contenido, wsdlRecepcion);
+
+        // 4. READ SRI RESPONSE ABOUD XML SENDED
+        String estado = respuestaSolicitud.getEstado();
+        if (estado.equals("DEVUELTA") && !respuestaSolicitud.getComprobantes().getComprobante().isEmpty()) {
+
+            // 4.1 SRI RETURN XML WITH OBSERVATIONS
+            String message = estado + ":\n";
+            for (Mensaje mensaje : respuestaSolicitud.getComprobantes().getComprobante().get(0).getMensajes().getMensaje()) {
+                message += mensaje.getMensaje() + "\n";
+            }
+
+            // 4.2 UPDATE LOCAL SALE DOCUMENT STATE
+            saleDocument.setSaleDocumentState(SaleDocument.INCORRECTO);
+            saleDocumentBO.updateSaleDocument(saleDocument);
+
+            // NOTA: WFT TOO LONG
+            String mensaje = respuestaSolicitud.getComprobantes().getComprobante().get(0).getMensajes().getMensaje().get(0).getMensaje();
+            String aditional = respuestaSolicitud.getComprobantes().getComprobante().get(0).getMensajes().getMensaje().get(0).getInformacionAdicional();
+
+            // 4.3 UPDATE SALE DOCUMENT IN EXTERNAL SERVER
+            actualizarDocumentoSale(urlBase, saleDocument, 5, mensaje + "\n" + aditional);
+
+            logger.error(saleDocument.getSaleDocumentId());
+            logger.error(mensaje);
+            logger.error(aditional);
+
+            // 4.4 THROW EXCEPTION TO UP
+            throw new NegocioException(message, SaleDocument.INCORRECTO);
+
+        }
+
+        // 5. UPDATE SALE DOCUMENT IN EXTERNAL SERVER
+        saleDocument.setSaleDocumentState(SaleDocument.ENVIADO);
+        saleDocumentBO.updateSaleDocument(saleDocument);
+        actualizarDocumentoSale(urlBase, saleDocument, 4, "ENVIADO");
+
+        // 6. RETURN RESPONSE FROM SRI SERVER
+        return respuestaSolicitud;
+    }
+
+    @Deprecated
+    public RespuestaSolicitud enviarDocumento(ReceptionStorageDTO request, String wsdlRecepcion, String urlBase) throws NegocioException {
+
+        SaleDocument saleDocument = saleDocumentBO.getLastSaleDocumentByDocumentId(request.getSaleDocumentId());
+        
         switch (saleDocument.getSaleDocumentState()) {
             case SaleDocument.INCORRECTO:
             throw new NegocioException("El documento es incorrecto, subir uno nuevo", SaleDocument.INCORRECTO);
@@ -90,7 +149,117 @@ public class SriBOv2 {
         return respuestaSolicitud;
     }
 
+    public RespuestaComprobante autorizar(SaleDocument saleDocument, String wsdlAutorizacion, String urlBase) throws NegocioException, JAXBException, AmazonServiceException, IOException {
+
+        // 1. REQUEST AUTHORIZATION STATUS TO SRI
+        RespuestaComprobante respuestaComprobante = sriBO.autorizarComprobante(request.getClaveAcceso(), wsdlAutorizacion);
+        
+        // 2. VALIDATE IF SALE DOCUMENT IS ALREADY AUTHORIZED
+        if (saleDocument.getSaleDocumentState() == SaleDocument.AUTORIZADO) {
+            return respuestaComprobante;
+        }
+
+        // 3. READ SRI RESPONSE
+        if (!respuestaComprobante.getAutorizaciones().getAutorizacion().isEmpty()) {
+
+            // RESPONSE DATA WAS NOT EMPTY
+            Autorizacion autorizacion =  respuestaComprobante.getAutorizaciones().getAutorizacion().get(0);
+            String estado = autorizacion.getEstado();
+
+            // READ STATUS FROM RESPONSE
+
+            // :::::::::::::::::::::::::
+            // XML WAS CORRECT
+            // :::::::::::::::::::::::::
+            if (estado.equals("AUTORIZADO")) {
+
+                // FIX XML DOCUMENT - PROJECT PARSE XML AS JSON
+                StringWriter sw = new StringWriter();
+                JAXBContext jaxbContext = JAXBContext.newInstance(AutorizacionComprobanteResponse.class);
+                Marshaller jaxbMarshaller = jaxbContext.createMarshaller();
+                AutorizacionComprobanteResponse au = new AutorizacionComprobanteResponse();
+                au.setRespuestaAutorizacionComprobante(respuestaComprobante);
+                jaxbMarshaller.marshal(au, sw);
+                String xmlString = sw.toString();
+                xmlString = xmlString.replace("&lt;", "<").replace("&gt;", ">").replace("<?xml version=\"1.0\" encoding=\"UTF-8\"?>", "");
+                byte [] data = xmlString.getBytes("utf-8");
+
+                // UPLOAD AUTHORIZED XML TO S3
+                String [] name = S3Manager.getInstance().uploadFile(data, "xml");
+
+                System.out.println("DOCUMENT FUE ALMACENADO");
+
+                // UPDATE LOCAL SALE DOCUMENT ATTRIBUTES
+                saleDocument.setSaleDocumentState(SaleDocument.AUTORIZADO);
+                saleDocument.setS3File(name[0]);
+				saleDocument.setPublicURL(name[1]);
+				
+				XMLGregorianCalendar autorizationDate = autorizacion.getFechaAutorizacion();
+				Calendar calendar = autorizationDate.toGregorianCalendar();
+
+				SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+				formatter.setTimeZone(calendar.getTimeZone());
+				String dateString = formatter.format(calendar.getTime());
+
+                // UPDATE EXTERNAL SALE DOCUMENT
+                actualizarDocumentoSale(
+					urlBase, 
+					saleDocument, 
+					7, 
+					"EXITO", 
+					autorizacion.getNumeroAutorizacion(), 
+					dateString,
+					autorizacion.getAmbiente(), 
+					saleDocument.getBarcodeClaveAcceso());
+
+            } else {
+                
+                // RETRIEVE ERROR MESSAGE
+                List<autorizacion.ws.sri.gob.ec.Mensaje> messages = autorizacion.getMensajes().getMensaje();
+
+                String strMessage = "";
+
+                if (messages.isEmpty()) {
+                    strMessage = "No message";
+                } else {
+                    for (autorizacion.ws.sri.gob.ec.Mensaje m : messages) {
+                        strMessage += "mensaje: " + m.getMensaje() + "\n";
+                        strMessage += "adicional" + m.getInformacionAdicional() + "\n";
+                    }
+                }
+
+                // SEND ERROR MESSAGE TO EXTERNAL SALE DOCUMENT
+                actualizarDocumentoSale(urlBase, saleDocument, 8, strMessage);
+                saleDocument.setSaleDocumentState(SaleDocument.NO_AUTORIZADO);
+
+                logger.error(saleDocument.getSaleDocumentId());
+                logger.error(strMessage);
+
+                // TODO ADD THROW EXCEPTION
+
+            }
+        } else {
+
+            // SEND ERROR MESSAGE TO EXTERNAL SALE DOCUMENT
+            actualizarDocumentoSale(urlBase, saleDocument, 1, "DATA NO ENVIADA");
+            saleDocument.setSaleDocumentState(SaleDocument.INCORRECTO);
+
+            logger.error(saleDocument.getSaleDocumentId());
+            logger.error("NO DATA");
+
+            // TODO ADD THROW EXCEPTION
+        }
+
+        // 4. UPDATE SALE DOCUMENT
+        saleDocumentBO.updateSaleDocument(saleDocument);
+
+        return respuestaComprobante;
+    }
+
+
+    @Deprecated
     public RespuestaComprobante autorizar(AutorizacionRequestDTO request, String wsdlAutorizacion, String urlBase) throws NegocioException, JAXBException, AmazonServiceException, IOException {
+        
         SaleDocument saleDocument = saleDocumentBO.getLastSaleDocumentByClaveAcceso(request.getClaveAcceso());
 
         if (saleDocument == null) {
@@ -178,7 +347,7 @@ public class SriBOv2 {
         return respuestaComprobante;
 	}
 	
-    private void actualizarDocumentoSale(String urlBase, SaleDocument saleDocument, int state, String message) {
+    public void actualizarDocumentoSale(String urlBase, SaleDocument saleDocument, int state, String message) {
 		
         Map<String, Object> body = new HashMap<>();
         body.put("stateDocument", state);
@@ -220,7 +389,6 @@ public class SriBOv2 {
 	}
 
     private void actualizarDocumentoSale(String urlBase, int companyId, int saleDocumentId, Map<String, Object> body) {
-
 
         try {
             Response<ResponseBody> response = ApiClient.getSaleApi(urlBase)
