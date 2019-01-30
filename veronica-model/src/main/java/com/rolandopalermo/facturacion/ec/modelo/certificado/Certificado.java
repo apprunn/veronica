@@ -22,7 +22,6 @@ public class Certificado {
     @NotEmpty
     protected String ruc;
 
-    @NotEmpty // Flag environment must be not Empty because int variable take 0
     protected int flagEnvironment;
 
 
