@@ -270,6 +270,7 @@ public class SQSManager {
 
         }
 
+        @Deprecated
         private void autorizar(String claveAcceso, String wsdlAutorizacion) {
             try {
                 AutorizacionRequestDTO request = new AutorizacionRequestDTO();

@@ -152,7 +152,7 @@ public class SriBOv2 {
     public RespuestaComprobante autorizar(SaleDocument saleDocument, String wsdlAutorizacion, String urlBase) throws NegocioException, JAXBException, AmazonServiceException, IOException {
 
         // 1. REQUEST AUTHORIZATION STATUS TO SRI
-        RespuestaComprobante respuestaComprobante = sriBO.autorizarComprobante(request.getClaveAcceso(), wsdlAutorizacion);
+        RespuestaComprobante respuestaComprobante = sriBO.autorizarComprobante(saleDocument.getClaveAcceso(), wsdlAutorizacion);
         
         // 2. VALIDATE IF SALE DOCUMENT IS ALREADY AUTHORIZED
         if (saleDocument.getSaleDocumentState() == SaleDocument.AUTORIZADO) {
