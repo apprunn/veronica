@@ -2,6 +2,7 @@ package com.rolandopalermo.facturacion.ec.bo;
 
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -55,6 +56,9 @@ public class FirmadorBO {
 				throw new Exception("No se pudo eliminar los archivos temporales.");
 			}
 			return data;
+		} catch (IOException e) {
+			logger.error("firmarComprobanteElectronico", e);
+			throw new NegocioException(e.getMessage());
 		} catch (Exception e) {
 			logger.error("firmarComprobanteElectronico", e);
 			throw new NegocioException("Ocurrió un error al generar el comprobante electrónico.");
