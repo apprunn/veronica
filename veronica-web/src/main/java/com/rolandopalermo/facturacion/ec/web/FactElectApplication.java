@@ -16,7 +16,7 @@ public class FactElectApplication {
 	public static void main(String[] args) {
 
 		S3Manager.getInstance().initialize();
-		
+
 		SpringApplication.run(FactElectApplication.class, args);
 
 	}

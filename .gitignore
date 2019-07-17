@@ -15,6 +15,7 @@ out/
 .java-version
 *.p12
 *.log
+*.log.*
 /saleDocuments
 /src/filters
 veronica-web/src/main/resources/application.properties

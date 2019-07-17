@@ -31,6 +31,7 @@ import io.swagger.annotations.ApiParam;
 @RestController
 @RequestMapping(value = "/api/v1/register")
 @Api(description = "Controlador de compañias")
+@CrossOrigin
 public class RegisterCertificateController {
 
     private static final Logger logger = Logger.getLogger(RegisterCertificateController.class);
@@ -41,7 +42,6 @@ public class RegisterCertificateController {
 	@Value("${sales.ruta}")
     private String baseURL;
 
-    @CrossOrigin(origins = "*")
     @ApiOperation(value = "Registra o actualiza una compañia")
     @PostMapping(value = "/company", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<GenericResponse<String>> registrarCompany(
