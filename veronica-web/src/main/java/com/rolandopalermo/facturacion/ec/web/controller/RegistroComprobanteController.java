@@ -15,7 +15,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.google.gson.Gson;
 import com.rolandopalermo.facturacion.ec.bo.FirmadorBO;
 import com.rolandopalermo.facturacion.ec.bo.GeneradorBO;
 import com.rolandopalermo.facturacion.ec.common.exception.BadRequestException;
@@ -149,13 +148,11 @@ public class RegistroComprobanteController {
 		message.put("ruc", company.getRuc());
 		message.put("saleDocumentId", String.valueOf(saleDocumentId));
 		message.put("companyId", String.valueOf(company.getCompanyId()));
+		message.put("action", "SEND");
 
 		String messageGroupId = String.format("group_%d_%d_%d", saleDocument.getId(), company.getCompanyId(), saleDocument.getSaleDocumentId());
 
-		Gson gson = new Gson();
-		String strMessage = gson.toJson(message);
-
-		sqsManager.sendMessage(strMessage, messageGroupId);
+		sqsManager.sendMessage(message, messageGroupId);
 
 		logger.debug("Se envio el documento al SQS: SaleDocument: " + saleDocumentId);
 

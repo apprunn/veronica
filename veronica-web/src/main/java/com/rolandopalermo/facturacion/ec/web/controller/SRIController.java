@@ -23,7 +23,6 @@ import com.rolandopalermo.facturacion.ec.common.exception.NegocioException;
 import com.rolandopalermo.facturacion.ec.common.exception.ResourceNotFoundException;
 import com.rolandopalermo.facturacion.ec.dto.AutorizacionRequestDTO;
 import com.rolandopalermo.facturacion.ec.dto.RecepcionRequestDTO;
-import com.rolandopalermo.facturacion.ec.dto.ReceptionStorageDTO;
 import com.rolandopalermo.facturacion.ec.modelo.ComprobanteElectronico;
 import com.rolandopalermo.facturacion.ec.modelo.factura.Factura;
 import com.rolandopalermo.facturacion.ec.modelo.guia.GuiaRemision;
@@ -31,7 +30,6 @@ import com.rolandopalermo.facturacion.ec.modelo.notacredito.NotaCredito;
 import com.rolandopalermo.facturacion.ec.modelo.notadebito.NotaDebito;
 import com.rolandopalermo.facturacion.ec.modelo.retencion.ComprobanteRetencion;
 import com.rolandopalermo.facturacion.ec.web.bo.SaleDocumentBO;
-import com.rolandopalermo.facturacion.ec.web.bo.SriBOv2;
 import autorizacion.ws.sri.gob.ec.RespuestaComprobante;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
@@ -48,9 +46,10 @@ public class SRIController {
 	@Autowired
 	private SriBO sriBO;
 
+	/*
 	@Autowired
 	private SriBOv2 sriBOv2;
-
+*/
 	@Autowired 
 	SaleDocumentBO saleDocumentBO;
 
@@ -107,7 +106,7 @@ public class SRIController {
 			throw new InternalServerException(e.getMessage());
 		}
 	}
-
+/*
 	@ApiOperation(value = "Envía un comprobante electronico almacenado a validar al SRI y lo autoriza")
 	@PostMapping(value = "/enviar-storage", produces = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<RespuestaSolicitud> enviarComprobanteAlmacenado(
@@ -125,7 +124,9 @@ public class SRIController {
 			throw new InternalServerException(e.getMessage());
 		}
 	}
+	*/
 
+	/*
 	@ApiOperation(value = "Solicita la validación de una clave de acceso")
 	@PostMapping(value = "/autorizar/v1", produces = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<RespuestaComprobante> autorizarComprobanteV2(
@@ -142,7 +143,7 @@ public class SRIController {
 			logger.error("autorizarComprobante", e);
 			throw new InternalServerException(e.getMessage());
 		}
-	}
+	}*/
 
 	@ApiOperation(value = "Solicita la validación de una clave de acceso")
 	@PostMapping(value = "/autorizar/", produces = MediaType.APPLICATION_JSON_VALUE)

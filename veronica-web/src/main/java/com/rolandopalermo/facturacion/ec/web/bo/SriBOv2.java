@@ -237,6 +237,8 @@ public class SriBOv2 {
 
                 // TODO ADD THROW EXCEPTION
 
+                throw new NegocioException(strMessage, SaleDocument.NO_AUTORIZADO);
+
             }
         } else {
 
@@ -248,6 +250,7 @@ public class SriBOv2 {
             logger.error("NO DATA");
 
             // TODO ADD THROW EXCEPTION
+            throw new NegocioException("NO_DATA", SaleDocument.INCORRECTO);
         }
 
         // 4. UPDATE SALE DOCUMENT
@@ -345,7 +348,8 @@ public class SriBOv2 {
         saleDocumentBO.updateSaleDocument(saleDocument);
 
         return respuestaComprobante;
-	}
+    }
+    
 	
     public void actualizarDocumentoSale(String urlBase, SaleDocument saleDocument, int state, String message) {
 		

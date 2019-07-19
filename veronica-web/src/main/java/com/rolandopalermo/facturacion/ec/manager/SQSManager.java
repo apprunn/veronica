@@ -24,8 +24,6 @@ import com.amazonaws.services.sqs.model.SendMessageResult;
 import com.google.common.reflect.TypeToken;
 import com.google.gson.Gson;
 import com.rolandopalermo.facturacion.ec.common.exception.NegocioException;
-import com.rolandopalermo.facturacion.ec.dto.AutorizacionRequestDTO;
-import com.rolandopalermo.facturacion.ec.dto.ReceptionStorageDTO;
 import com.rolandopalermo.facturacion.ec.web.bo.CompanyBO;
 import com.rolandopalermo.facturacion.ec.web.bo.SaleDocumentBO;
 import com.rolandopalermo.facturacion.ec.web.bo.SriBOv2;
@@ -114,7 +112,7 @@ public class SQSManager {
             
             createConsumer();
 
-        } catch (JMSException e) {
+        } catch (Exception e) {
             e.printStackTrace();
 		}
 
@@ -138,9 +136,14 @@ public class SQSManager {
 
     }
 
-    public SendMessageResult sendMessage(String message, String messageGroupId) {
- 
-        SendMessageRequest sendMessageRequest = new SendMessageRequest(queueUrl, message);
+    public SendMessageResult sendMessage(Map<String, String> message, String messageGroupId) {
+        
+		Gson gson = new Gson();
+        String strMessage = gson.toJson(message);
+        
+        logger.debug("SQS MESSAGE" + strMessage);
+
+        SendMessageRequest sendMessageRequest = new SendMessageRequest(queueUrl, strMessage);
         sendMessageRequest.setMessageGroupId(messageGroupId);
         sendMessageRequest.setMessageDeduplicationId(messageGroupId + ".fifo");
         return sqs.sendMessage(sendMessageRequest);
@@ -211,56 +214,88 @@ public class SQSManager {
                 // 2. PARSE DATA
                 Map<String, String> data = gson.fromJson(body, type);
 
+                String action = data.get("action");
+
+                    deleteMessage(receiptHandle);
+                    return;
+                }
+
+                logger.debug("ACTION: " + action);
+
                 int saleDocumentId = Integer.parseInt(data.get("saleDocumentId"));
                 String ruc = data.get("ruc");
                 
                 Company company = companyBO.getCompany(ruc);
                 SaleDocument saleDocument = saleDocumentBO.getLastSaleDocumentByDocumentId(saleDocumentId);
 
-                // 3. VALIDATE SALE DOCUMENTE EXIST
-                if (saleDocument == null) {
+                if ( action.equals("SEND") ) {
 
-                    deleteMessage(receiptHandle);
-                    logger.error("SALE DOCUMENT " + saleDocumentId + " NOT REGISTER");
-                    throw new NegocioException("SALE DOCUMENT " + saleDocumentId + " NOT REGISTER");
-                
+                    // 3. VALIDATE SALE DOCUMENTE EXIST
+                    if (saleDocument == null) {
+    
+                        // deleteMessage(receiptHandle);
+                        message.acknowledge();
+                        logger.error("SALE DOCUMENT " + saleDocumentId + " NOT REGISTER");
+                        throw new NegocioException("SALE DOCUMENT " + saleDocumentId + " NOT REGISTER");
+                    
+                    }
+    
+                    // 4. VALIDATE IF COMPANY WAS REGISTERED
+                    if (company == null) {
+    
+                        saleDocument.setSaleDocumentState(SaleDocument.INCORRECTO);
+                        saleDocumentBO.updateSaleDocument(saleDocument);
+                        sriBo.actualizarDocumentoSale(urlBase, saleDocument, 1, "Compañia no registrada");
+    
+                        // deleteMessage(receiptHandle);
+                        message.acknowledge();
+                        logger.error("La compañia " + ruc + " no registrada");
+                        throw new NegocioException("La compañia " + ruc + " no registrada");
+    
+                    }
+    
+                    // 5. SEND XML DOCUMENTS TO SRI SYSTEM
+                    String wsdlRecepcion = company.getFlagEnvironment() == 0 ? wsdlReceptionTest : wsdlReceptionProduction;
+                    sriBo.enviarDocumento(saleDocument, wsdlRecepcion, urlBase);
+                    logger.debug("SaleDocument enviado: " + saleDocumentId);
+
+
+                    data.put("action", "AUTHORIZE");
+
+                    String messageGroupId = String.format("group_%d_%d_%d_AUTHORIZE", saleDocument.getId(), company.getCompanyId(), saleDocument.getSaleDocumentId());
+
+                    sendMessage(data, messageGroupId);
+                    message.acknowledge();
+
+                } else if (action.equals("AUTHORIZE")) {
+
+                    // 6. READ RESPONSE FROM SRI IF XML DOCUMENT WAS CORRECT
+                    String wsdlAutorizacion = company.getFlagEnvironment() == 0 ? wsdlAuthorizationTest : wsdlAuthorizationProduction;
+                    sriBo.autorizar(saleDocument, wsdlAutorizacion, urlBase);
+
+                    // 7. DELETE MESSAGA FROM QUEUE
+                    // deleteMessage(receiptHandle);
+                    message.acknowledge();
+
+                    logger.debug("SaleDocument autentificado: " + saleDocumentId);
+
                 }
 
-                // 4. VALIDATE IF COMPANY WAS REGISTERED
-                if (company == null) {
+                // deleteMessage(receiptHandle);
 
-                    saleDocument.setSaleDocumentState(SaleDocument.INCORRECTO);
-                    saleDocumentBO.updateSaleDocument(saleDocument);
-                    sriBo.actualizarDocumentoSale(urlBase, saleDocument, 1, "Compañia no registrada");
 
-                    deleteMessage(receiptHandle);
-                    logger.error("La compañia " + ruc + " no registrada");
-                    throw new NegocioException("La compañia " + ruc + " no registrada");
-
-                }
-
-                // 5. SEND XML DOCUMENTS TO SRI SYSTEM
-                String wsdlRecepcion = company.getFlagEnvironment() == 0 ? wsdlReceptionTest : wsdlReceptionProduction;
-                sriBo.enviarDocumento(saleDocument, wsdlRecepcion, urlBase);
-                logger.debug("SaleDocument enviado: " + saleDocumentId);
-
-                // 6. READ RESPONSE FROM SRI IF XML DOCUMENT WAS CORRECT
-                String wsdlAutorizacion = company.getFlagEnvironment() == 0 ? wsdlAuthorizationTest : wsdlAuthorizationProduction;
-                sriBo.autorizar(saleDocument, wsdlAutorizacion, urlBase);
-
-                // 7. DELETE MESSAGA FROM QUEUE
-                deleteMessage(receiptHandle);
-
-                logger.debug("SaleDocument autentificado: " + saleDocumentId);
 
             } catch (NegocioException e) {
 
-                logger.error(e.getMessage());
+                logger.error(e.getStackTrace());
 
                 if (e.getCode() == SaleDocument.INCORRECTO) {
                     // X.1. ACTUALIZAR ESTADO DE DOCUMENTO FALLIDO
-                    String receiptHandle = ((SQSMessage) message).getReceiptHandle();
-                    deleteMessage(receiptHandle);
+                    try {
+                        message.acknowledge();
+                    } catch (JMSException e1) {
+                        e1.printStackTrace();
+                    }
                 }
 
             } catch (Exception e) {
@@ -270,6 +305,7 @@ public class SQSManager {
 
         }
 
+        /*
         @Deprecated
         private void autorizar(String claveAcceso, String wsdlAutorizacion) {
             try {
@@ -281,6 +317,7 @@ public class SQSManager {
                 logger.error("EL DOCUMENTO NO AUTORIZADO: " + claveAcceso);
             }
         }
+        */
     }
 
 }
