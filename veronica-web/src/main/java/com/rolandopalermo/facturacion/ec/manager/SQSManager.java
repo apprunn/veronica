@@ -216,6 +216,7 @@ public class SQSManager {
 
                 String action = data.get("action");
 
+                if (action == null) {
                     deleteMessage(receiptHandle);
                     return;
                 }
