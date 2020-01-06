@@ -1,12 +1,17 @@
 package com.rolandopalermo.facturacion.ec.common.sri;
 
+import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.StringWriter;
 import java.security.KeyStore;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
 import java.security.Provider;
+import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.List;
 
@@ -226,6 +231,26 @@ public abstract class GenericXMLSignature {
 		storeManager = new KSStore(ks, new PassStoreKS(pkcs12_pasword));
 		is.close();
 		return storeManager;
+	}
+
+	/**
+	 * Devuelve true si la firma logra abrirse exitosamente
+	 * @param signature
+	 * @param password
+	 * @return
+	 */
+	public static boolean verifyPKSStore(byte [] signature, String password) {
+		try {
+            KeyStore ks = KeyStore.getInstance("PKCS12");
+            InputStream is = new ByteArrayInputStream(signature);
+            ks.load(is, password.toCharArray());
+            new KSStore(ks, new PassStoreKS(password));
+            is.close();
+            return true;
+        } catch (KeyStoreException | CertificateException | NoSuchAlgorithmException | IOException ex) {
+            return false;
+        }
+        
 	}
 
 	/**

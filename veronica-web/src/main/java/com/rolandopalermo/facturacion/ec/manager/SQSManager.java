@@ -284,8 +284,6 @@ public class SQSManager {
 
                 // deleteMessage(receiptHandle);
 
-
-
             } catch (NegocioException e) {
 
                 logger.error(e.getStackTrace());

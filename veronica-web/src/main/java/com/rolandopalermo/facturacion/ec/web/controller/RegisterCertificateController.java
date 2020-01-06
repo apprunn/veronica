@@ -1,11 +1,13 @@
 package com.rolandopalermo.facturacion.ec.web.controller;
 
+import java.util.Map;
+
 import javax.validation.Valid;
 
+import com.rolandopalermo.facturacion.ec.common.exception.BadRequestException;
 import com.rolandopalermo.facturacion.ec.common.exception.InternalServerException;
 import com.rolandopalermo.facturacion.ec.common.exception.NegocioException;
 import com.rolandopalermo.facturacion.ec.common.exception.ResourceNotFoundException;
-import com.rolandopalermo.facturacion.ec.dto.GenericResponse;
 import com.rolandopalermo.facturacion.ec.modelo.certificado.Certificado;
 import com.rolandopalermo.facturacion.ec.web.bo.CompanyBO;
 import com.rolandopalermo.facturacion.ec.web.domain.Company;
@@ -20,6 +22,7 @@ import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -44,17 +47,20 @@ public class RegisterCertificateController {
 
     @ApiOperation(value = "Registra o actualiza una compañia")
     @PostMapping(value = "/company", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<GenericResponse<String>> registrarCompany(
+    public ResponseEntity<Company> registrarCompany(
         @Valid
         @ApiParam(value = "Certificado, clave y id de compañia", required = true)
-        @RequestBody Certificado certificado
+        @RequestBody Certificado certificado,
+        @RequestHeader Map<String, String> header
     ) {
         try {
-            boolean success = companyBO.registerCompany(certificado, baseURL);
-            return new ResponseEntity<GenericResponse<String>>(new GenericResponse<String>("Success: " + success), HttpStatus.OK);
+
+            String token = header.get("authorization");
+            Company company = companyBO.registerCompany(certificado, baseURL, token);
+            return new ResponseEntity<>(company, HttpStatus.OK);
         } catch (Exception e) {
             logger.error(e.getMessage());
-            throw new InternalServerException(e.getMessage());
+            throw new BadRequestException(e.getMessage());
         }
     }
 

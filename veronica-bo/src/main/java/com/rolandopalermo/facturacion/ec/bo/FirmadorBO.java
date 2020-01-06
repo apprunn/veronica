@@ -64,5 +64,8 @@ public class FirmadorBO {
 			throw new NegocioException("Ocurrió un error al generar el comprobante electrónico.");
 		}
 	}
-
+	
+	public boolean verifySignature(byte [] signature, String password) {
+		return Firmador.verifyPKSStore(signature, password);
+	}
 }

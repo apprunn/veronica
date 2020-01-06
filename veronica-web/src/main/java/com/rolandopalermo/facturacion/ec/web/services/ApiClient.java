@@ -10,6 +10,7 @@ import retrofit2.Call;
 import retrofit2.Retrofit;
 import retrofit2.converter.gson.GsonConverterFactory;
 import retrofit2.http.Body;
+import retrofit2.http.Header;
 import retrofit2.http.PATCH;
 import retrofit2.http.POST;
 import retrofit2.http.Path;
@@ -49,7 +50,8 @@ public class ApiClient {
         @PATCH("subsidiaries-flag-taxes/{ruc}")
         Call<ResponseBody> updateFlagTaxes(
             @Path("ruc") String ruc,
-            @Body Map<String, Object> body);
+            @Body Map<String, Object> body,
+            @Header("Authorization") String token);
 
     }
 
