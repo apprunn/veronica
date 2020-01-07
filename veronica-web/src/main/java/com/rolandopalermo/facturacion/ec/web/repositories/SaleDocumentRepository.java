@@ -12,6 +12,8 @@ public interface SaleDocumentRepository extends CrudRepository<SaleDocument, Int
 
     List<SaleDocument> findBySaleDocumentId(int saleDocumentId);
 
+    List<SaleDocument> findBySaleDocumentState(int saleDocumentState);
+
     SaleDocument findTopBySaleDocumentId(int saleDocumentId);
 
     SaleDocument findTopByClaveAcceso(String claveAcceso);

@@ -1,11 +1,36 @@
 package com.rolandopalermo.facturacion.ec.web.controller;
 
-import javax.annotation.Resource;
+import static com.rolandopalermo.facturacion.ec.common.util.Constantes.API_DOC_ANEXO_1;
+
+import java.io.File;
+import java.io.IOException;
+
 import javax.validation.Valid;
 import javax.validation.constraints.NotNull;
+import javax.xml.bind.JAXBException;
+
+import com.amazonaws.AmazonServiceException;
+import com.rolandopalermo.facturacion.ec.bo.FirmadorBO;
+import com.rolandopalermo.facturacion.ec.bo.GeneradorBO;
+import com.rolandopalermo.facturacion.ec.common.exception.BadRequestException;
+import com.rolandopalermo.facturacion.ec.common.exception.InternalServerException;
+import com.rolandopalermo.facturacion.ec.common.exception.NegocioException;
+import com.rolandopalermo.facturacion.ec.common.exception.ResourceNotFoundException;
+import com.rolandopalermo.facturacion.ec.modelo.ComprobanteElectronico;
+import com.rolandopalermo.facturacion.ec.modelo.factura.Factura;
+import com.rolandopalermo.facturacion.ec.modelo.guia.GuiaRemision;
+import com.rolandopalermo.facturacion.ec.modelo.notacredito.NotaCredito;
+import com.rolandopalermo.facturacion.ec.modelo.notadebito.NotaDebito;
+import com.rolandopalermo.facturacion.ec.modelo.retencion.ComprobanteRetencion;
+import com.rolandopalermo.facturacion.ec.web.bo.CompanyBO;
+import com.rolandopalermo.facturacion.ec.web.bo.SaleDocumentBO;
+import com.rolandopalermo.facturacion.ec.web.bo.SriBOv2;
+import com.rolandopalermo.facturacion.ec.web.domain.Company;
+import com.rolandopalermo.facturacion.ec.web.domain.SaleDocument;
 
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -15,33 +40,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.rolandopalermo.facturacion.ec.bo.FirmadorBO;
-import com.rolandopalermo.facturacion.ec.bo.GeneradorBO;
-import com.rolandopalermo.facturacion.ec.common.exception.BadRequestException;
-import com.rolandopalermo.facturacion.ec.common.exception.InternalServerException;
-import com.rolandopalermo.facturacion.ec.common.exception.NegocioException;
-import com.rolandopalermo.facturacion.ec.common.exception.ResourceNotFoundException;
-import com.rolandopalermo.facturacion.ec.manager.SQSManager;
-import com.rolandopalermo.facturacion.ec.modelo.ComprobanteElectronico;
-import com.rolandopalermo.facturacion.ec.modelo.factura.Factura;
-import com.rolandopalermo.facturacion.ec.modelo.guia.GuiaRemision;
-import com.rolandopalermo.facturacion.ec.modelo.notacredito.NotaCredito;
-import com.rolandopalermo.facturacion.ec.modelo.notadebito.NotaDebito;
-import com.rolandopalermo.facturacion.ec.modelo.retencion.ComprobanteRetencion;
-import com.rolandopalermo.facturacion.ec.web.bo.CompanyBO;
-import com.rolandopalermo.facturacion.ec.web.bo.SaleDocumentBO;
-import com.rolandopalermo.facturacion.ec.web.domain.Company;
-import com.rolandopalermo.facturacion.ec.web.domain.SaleDocument;
-
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import io.swagger.annotations.ApiParam;
-
-import static com.rolandopalermo.facturacion.ec.common.util.Constantes.*;
-
-import java.io.File;
-import java.util.HashMap;
-import java.util.Map;
 
 @RestController
 @RequestMapping(value = "/api/v1/register")
@@ -49,6 +50,21 @@ import java.util.Map;
 public class RegistroComprobanteController {
 
 	private static final Logger logger = Logger.getLogger(GeneracionController.class);
+
+	@Value("${sri.soap.recepcion.wsdl.test}")
+    private String wsdlReceptionTest;
+    
+	@Value("${sri.soap.recepcion.wsdl.production}")
+	private String wsdlReceptionProduction;
+	
+    @Value("${sales.ruta}")
+	private String urlBase;
+	
+    @Value("${sri.soap.autorizacion.wsdl.test}")
+    private String wsdlAuthorizationTest;
+
+    @Value("${sri.soap.autorizacion.wsdl.production}")
+    private String wsdlAuthorizationProduction;
 
 	@Autowired
 	private GeneradorBO generadorBO;
@@ -62,8 +78,8 @@ public class RegistroComprobanteController {
 	@Autowired
 	private SaleDocumentBO saleDocumentBO;
 
-	@Resource(name = "sqs_manager")
-	SQSManager sqsManager;
+    @Autowired
+    private SriBOv2 sriBo;
 
 	@ApiOperation(value = "Genera,firmar y encola envio de factura en formato XML")
 	@PostMapping(value = "/factura", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -142,19 +158,24 @@ public class RegistroComprobanteController {
 
 		logger.debug("Actualizacion correcta: SaleDocument: " + saleDocumentId);
 
-		// Send Message to SQS
-		Map<String, String> message = new HashMap<>();
+		String wsdlRecepcion = company.getFlagEnvironment() == 0 ? wsdlReceptionTest : wsdlReceptionProduction;
+		
+		try {
+			sriBo.enviarDocumento(saleDocument, wsdlRecepcion, urlBase);
+		} catch (NegocioException e) {
+            throw new BadRequestException(e.getMessage());
+		}
 
-		message.put("ruc", company.getRuc());
-		message.put("saleDocumentId", String.valueOf(saleDocumentId));
-		message.put("companyId", String.valueOf(company.getCompanyId()));
-		message.put("action", "SEND");
 
-		String messageGroupId = String.format("group_%d_%d_%d", saleDocument.getId(), company.getCompanyId(), saleDocument.getSaleDocumentId());
+		String wsdlAutorizacion = company.getFlagEnvironment() == 0 ? wsdlAuthorizationTest
+		: wsdlAuthorizationProduction;
 
-		sqsManager.sendMessage(message, messageGroupId);
-
-		logger.debug("Se envio el documento al SQS: SaleDocument: " + saleDocumentId);
+		try {
+			sriBo.autorizar(saleDocument, wsdlAutorizacion, urlBase);
+		} catch (AmazonServiceException | NegocioException | JAXBException | IOException e) {
+			// Aun no esta autorizado
+			logger.error(e.getMessage());
+		}
 
 		return new ResponseEntity<SaleDocument>(saleDocument, HttpStatus.OK);
 

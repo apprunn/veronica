@@ -62,6 +62,10 @@ public class SaleDocumentBO {
         }
     }
 
+    public List<SaleDocument> fetchSentDocument() {
+        return saleDocumentRepository.findBySaleDocumentState(SaleDocument.ENVIADO);
+    }
+
     public List<SaleDocument> getSaleDocumentByCompany(int id) throws NegocioException {
         try {
             return saleDocumentRepository.findByCompanyId(id);
