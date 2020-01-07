@@ -41,6 +41,9 @@ public class ApiClient {
 
     public interface SalesApi {
 
+        public static final int ENVIRONMENT_PRODUCTION = 2;
+        public static final int ENVIRONMENT_TEST = 1;
+
         @POST("electronic-taxes/{documentId}/{companyId}/document")
         Call<ResponseBody> updateSaleDocuementState(
             @Path("documentId") int documentId, 

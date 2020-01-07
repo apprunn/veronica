@@ -13,6 +13,7 @@ import com.rolandopalermo.facturacion.ec.modelo.certificado.Certificado;
 import com.rolandopalermo.facturacion.ec.web.domain.Company;
 import com.rolandopalermo.facturacion.ec.web.repositories.CompanyRepository;
 import com.rolandopalermo.facturacion.ec.web.services.ApiClient;
+import com.rolandopalermo.facturacion.ec.web.services.ApiClient.SalesApi;
 
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -60,7 +61,7 @@ public class CompanyBO {
 
             }
 
-            updateSubisidiaryFlagTaxes(salesURL, certificado.getRuc(), 1, token);
+            updateSubisidiaryFlagTaxes(salesURL, certificado.getRuc(), 1, certificado.getFlagEnvironment(), token);
 
             // Obtener Datos de compañia
             Company company = companyRepository.findByRuc(certificado.getRuc());
@@ -136,7 +137,7 @@ public class CompanyBO {
         } catch (Exception e) {
 
             if (e.getMessage().equals("JAPISALE_NOT_RESPONSE") || e.getMessage().contains("JAPISALE_NOT_FAILED")) {
-                updateSubisidiaryFlagTaxes(salesURL, certificado.getRuc(), 0, token);
+                updateSubisidiaryFlagTaxes(salesURL, certificado.getRuc(), 0, certificado.getFlagEnvironment(), token);
             }
 
             log.error(e.getMessage());
@@ -156,10 +157,11 @@ public class CompanyBO {
         }
     }
 
-    public void updateSubisidiaryFlagTaxes(String urlBase, String ruc, int flagTaxes, String token) throws NegocioException {
+    public void updateSubisidiaryFlagTaxes(String urlBase, String ruc, int flagTaxes, int flagEnvironment, String token) throws NegocioException {
 
         Map<String, Object> body = new HashMap<>();
         body.put("flagTaxes", flagTaxes);
+        body.put("typeAmbientTax", flagEnvironment == 1 ? SalesApi.ENVIRONMENT_PRODUCTION : SalesApi.ENVIRONMENT_TEST);
 
         try {
             Response<ResponseBody> response = ApiClient.getSaleApi(urlBase).updateFlagTaxes(ruc, body, token).execute();
