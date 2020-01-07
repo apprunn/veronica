@@ -75,3 +75,12 @@ http://localhost:8080/veronica/swagger-ui.html
 | [![](https://avatars1.githubusercontent.com/u/11875482?v=4&s=80)](https://github.com/rolandopalermo) |
 |-|
 | [@rolandopalermo](https://github.com/rolandopalermo) |
+
+## Debug SOAP SRI
+
+```java
+	System.setProperty("com.sun.xml.ws.transport.http.client.HttpTransportPipe.dump", "true");
+	System.setProperty("com.sun.xml.internal.ws.transport.http.client.HttpTransportPipe.dump", "true");
+	System.setProperty("com.sun.xml.ws.transport.http.HttpAdapter.dump", "true");
+	System.setProperty("com.sun.xml.internal.ws.transport.http.HttpAdapter.dump", "true");
+```
