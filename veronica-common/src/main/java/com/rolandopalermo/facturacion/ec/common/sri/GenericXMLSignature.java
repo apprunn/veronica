@@ -3,15 +3,11 @@ package com.rolandopalermo.facturacion.ec.common.sri;
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileOutputStream;
-import java.io.IOException;
 import java.io.InputStream;
 import java.io.StringWriter;
 import java.security.KeyStore;
-import java.security.KeyStoreException;
-import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
 import java.security.Provider;
-import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.List;
 
@@ -44,6 +40,8 @@ import lombok.Setter;
 @Setter
 @Getter
 public abstract class GenericXMLSignature {
+
+	private static final String ID_CE_CERTIFICATE_POLICIES = "2.5.29.32";
 
 	/**
 	 * <p>
@@ -224,11 +222,10 @@ public abstract class GenericXMLSignature {
 	 *         </p>
 	 */
 	private IPKStoreManager getPKStoreManager() throws Exception {
-		IPKStoreManager storeManager = null;
 		KeyStore ks = KeyStore.getInstance("PKCS12");
 		InputStream is = new java.io.FileInputStream(pkcs12_resource);
 		ks.load(is, pkcs12_pasword.toCharArray());
-		storeManager = new KSStore(ks, new PassStoreKS(pkcs12_pasword));
+		IPKStoreManager storeManager = new KSStore(ks, new PassStoreKS(pkcs12_pasword));
 		is.close();
 		return storeManager;
 	}
@@ -244,10 +241,18 @@ public abstract class GenericXMLSignature {
             KeyStore ks = KeyStore.getInstance("PKCS12");
             InputStream is = new ByteArrayInputStream(signature);
             ks.load(is, password.toCharArray());
-            new KSStore(ks, new PassStoreKS(password));
-            is.close();
-            return true;
-        } catch (KeyStoreException | CertificateException | NoSuchAlgorithmException | IOException ex) {
+            IPKStoreManager storeManager = new KSStore(ks, new PassStoreKS(password));
+			is.close();
+			
+			X509Certificate certificate = getFirstCertificate(storeManager);
+			if (certificate == null) {
+				return true;
+			}
+
+			return false;
+			
+        } catch (Exception ex) {
+			ex.printStackTrace();
             return false;
         }
         
@@ -262,14 +267,28 @@ public abstract class GenericXMLSignature {
 	 *            Interfaz de acceso al almacén
 	 * @return Primer certificado disponible en el almacén
 	 */
-	private X509Certificate getFirstCertificate(final IPKStoreManager storeManager) throws Exception {
-		List<X509Certificate> certs = null;
-		certs = storeManager.getSignCertificates();
-		if ((certs == null) || (certs.size() == 0)) {
+	private static X509Certificate getFirstCertificate(final IPKStoreManager storeManager) throws Exception {
+		List<X509Certificate> certs = storeManager.getSignCertificates();
+		if (certs == null || certs.isEmpty()) {
 			throw new Exception("La lista de certificados se encuentra vacía.");
 		}
 
-		X509Certificate certificate = certs.get(0);
+		X509Certificate certificate = certs.stream()
+			.filter(GenericXMLSignature::hasCertificatePolicies)
+			.findFirst()
+			.orElseThrow(() -> new Exception("No se encontró ningún certificado con políticas"));
+
 		return certificate;
+	}
+
+	private static boolean hasCertificatePolicies(X509Certificate certificate) {
+		if (certificate != null) {
+			byte[] certificatePolicies = certificate.getExtensionValue(ID_CE_CERTIFICATE_POLICIES);
+			if (certificatePolicies != null && certificatePolicies.length > 0) {
+				return true;
+			}
+		}
+		
+		return false;
 	}
 }
