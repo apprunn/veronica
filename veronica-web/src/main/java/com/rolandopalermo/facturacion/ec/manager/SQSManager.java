@@ -254,30 +254,54 @@ public class SQSManager {
                         throw new NegocioException("La compañia " + ruc + " no registrada");
     
                     }
+
+                    
+                    // Si el documento de venta ha sido renviendo se verifica en la SRI si este ha podido haber sido enviado antes
+                    // En caso de que esto sea correcto, el sistema actualiza el documento de venta sin enviar a la SRI
+                    if (saleDocument.getVersion() > 1) {
+                        try {
+                            
+                            autorizar(company, saleDocument);
+                            message.acknowledge();
+                            return;
+
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                    }
     
                     // 5. SEND XML DOCUMENTS TO SRI SYSTEM
                     String wsdlRecepcion = company.getFlagEnvironment() == 0 ? wsdlReceptionTest : wsdlReceptionProduction;
                     sriBo.enviarDocumento(saleDocument, wsdlRecepcion, urlBase);
                     logger.debug("SaleDocument enviado: " + saleDocumentId);
 
+                    // Se verifica si el documento de venta fuera valido por la SRI, caso contrario se crea una cola
+                    // Para poder verficicarlo mas tarde
+                    try {
+                        
+                        autorizar(company, saleDocument);
 
-                    data.put("action", "AUTHORIZE");
+                    } catch (Exception e) {
+                        e.printStackTrace();
 
-                    String messageGroupId = String.format("group_%d_%d_%d_AUTHORIZE", saleDocument.getId(), company.getCompanyId(), saleDocument.getSaleDocumentId());
+                        data.put("action", "AUTHORIZE");
 
-                    sendMessage(data, messageGroupId);
-                    message.acknowledge();
+                        String messageGroupId = String.format("group_%d_%d_%d_AUTHORIZE", saleDocument.getId(), company.getCompanyId(), saleDocument.getSaleDocumentId());
+
+                        sendMessage(data, messageGroupId);
+
+                    } finally {
+
+                        message.acknowledge();
+                    }
 
                 } else if (action.equals("AUTHORIZE")) {
 
                     // 6. READ RESPONSE FROM SRI IF XML DOCUMENT WAS CORRECT
-                    String wsdlAutorizacion = company.getFlagEnvironment() == 0 ? wsdlAuthorizationTest : wsdlAuthorizationProduction;
-                    sriBo.autorizar(saleDocument, wsdlAutorizacion, urlBase);
+                    autorizar(company, saleDocument);
 
                     // 7. DELETE MESSAGA FROM QUEUE
-                    // deleteMessage(receiptHandle);
                     message.acknowledge();
-
                     logger.debug("SaleDocument autentificado: " + saleDocumentId);
 
                 }
@@ -304,19 +328,13 @@ public class SQSManager {
 
         }
 
-        /*
-        @Deprecated
-        private void autorizar(String claveAcceso, String wsdlAutorizacion) {
-            try {
-                AutorizacionRequestDTO request = new AutorizacionRequestDTO();
-                request.setClaveAcceso(claveAcceso);
-                sriBo.autorizar(request, wsdlAutorizacion, urlBase);
-            } catch (Exception e) {
-                // INICIAR SEGUNDA COLA
-                logger.error("EL DOCUMENTO NO AUTORIZADO: " + claveAcceso);
-            }
+        private void autorizar(Company company, SaleDocument saleDocument) throws Exception {
+            
+            // 6. READ RESPONSE FROM SRI IF XML DOCUMENT WAS CORRECT
+            String wsdlAutorizacion = company.getFlagEnvironment() == 0 ? wsdlAuthorizationTest : wsdlAuthorizationProduction;
+            sriBo.autorizar(saleDocument, wsdlAutorizacion, urlBase);
+
         }
-        */
     }
 
 }
