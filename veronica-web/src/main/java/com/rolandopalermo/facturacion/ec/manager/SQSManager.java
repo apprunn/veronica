@@ -53,6 +53,8 @@ public class SQSManager {
     @Value("${sales.ruta}")
     private String urlBase;
 
+    private String sqsQueueName;
+
     @Autowired
     private SriBOv2 sriBo;
 
@@ -81,7 +83,8 @@ public class SQSManager {
 	@Value("${sri.soap.autorizacion.wsdl.production}")
     private String wsdlAuthorizationProduction;
 
-    public SQSManager() {
+    public SQSManager(String sqsQueueName) {
+        this.sqsQueueName = sqsQueueName;
         initialize();
     }
  
@@ -103,7 +106,7 @@ public class SQSManager {
 							.withRegion(Regions.US_EAST_1)
                             .build();
                             
-        queueUrl = sqs.getQueueUrl("sri-dev.fifo").getQueueUrl();
+        queueUrl = sqs.getQueueUrl(sqsQueueName).getQueueUrl();
 
         try {
             
@@ -122,7 +125,7 @@ public class SQSManager {
 
         Session session = connection.createSession(false, Session.CLIENT_ACKNOWLEDGE);
 
-        Queue queue = session.createQueue("sri-dev.fifo");
+        Queue queue = session.createQueue(sqsQueueName);
         
         MessageConsumer consumer = session.createConsumer(queue);
 
@@ -144,8 +147,8 @@ public class SQSManager {
         logger.debug("SQS MESSAGE" + strMessage);
 
         SendMessageRequest sendMessageRequest = new SendMessageRequest(queueUrl, strMessage);
-        sendMessageRequest.setMessageGroupId(messageGroupId);
-        sendMessageRequest.setMessageDeduplicationId(messageGroupId + ".fifo");
+        sendMessageRequest.setMessageGroupId(messageGroupId + ".fifo");
+        sendMessageRequest.setMessageDeduplicationId(messageGroupId);
         return sqs.sendMessage(sendMessageRequest);
 
     } 

@@ -9,6 +9,7 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.PropertySource;
 
@@ -19,6 +20,9 @@ public class FactElectApplication implements CommandLineRunner {
 
 	@Autowired
 	DataSource dataSource;
+
+    @Value("${aws.sqs.queue}")
+    private String sqsQueueName;
 
 	public static void main(String[] args) {
 
@@ -35,7 +39,7 @@ public class FactElectApplication implements CommandLineRunner {
 
 	@Bean(name = "sqs_manager")
 	public SQSManager createSQSManager() {
-		return new SQSManager();
+		return new SQSManager(sqsQueueName);
 	}
 
 }

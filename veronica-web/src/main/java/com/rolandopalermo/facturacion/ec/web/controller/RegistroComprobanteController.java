@@ -140,21 +140,46 @@ public class RegistroComprobanteController {
 
 		SaleDocument saleDocument = actualizarSaleDocument(company, request.getInfoTributaria().getClaveAcceso(), saleDocumentId, documentCode, signedContent);
 
-		logger.debug("Actualizacion correcta: SaleDocument: " + saleDocumentId);
+		if (saleDocument.getSaleDocumentState() != SaleDocument.AUTORIZADO) {
 
-		// Send Message to SQS
-		Map<String, String> message = new HashMap<>();
+			logger.debug("Actualizacion correcta: SaleDocument: " + saleDocumentId);
 
-		message.put("ruc", company.getRuc());
-		message.put("saleDocumentId", String.valueOf(saleDocumentId));
-		message.put("companyId", String.valueOf(company.getCompanyId()));
-		message.put("action", "SEND");
+			// Send Message to SQS
+			Map<String, String> message = new HashMap<>();
+	
+			message.put("ruc", company.getRuc());
+			message.put("saleDocumentId", String.valueOf(saleDocumentId));
+			message.put("companyId", String.valueOf(company.getCompanyId()));
+			message.put("action", "SEND");
+	
+			String messageGroupId = String.format("group_%d_%d_%d", saleDocument.getId(), company.getCompanyId(), saleDocument.getSaleDocumentId());
+	
+			sqsManager.sendMessage(message, messageGroupId);
+	
+			logger.debug("Se envio el documento al SQS: SaleDocument: " + saleDocumentId);
+			logger.debug("ACTION: SEND");
+			
+		} else {
 
-		String messageGroupId = String.format("group_%d_%d_%d", saleDocument.getId(), company.getCompanyId(), saleDocument.getSaleDocumentId());
+			logger.debug("Autorizacion SaleDocument: " + saleDocumentId);
 
-		sqsManager.sendMessage(message, messageGroupId);
+			// Send Message to SQS
+			Map<String, String> message = new HashMap<>();
+	
+			message.put("ruc", company.getRuc());
+			message.put("saleDocumentId", String.valueOf(saleDocumentId));
+			message.put("companyId", String.valueOf(company.getCompanyId()));
+			message.put("action", "AUTHORIZE");
+	
+			String messageGroupId = String.format("group_%d_%d_%d_AUTHORIZE", saleDocument.getId(), company.getCompanyId(), saleDocument.getSaleDocumentId());
+	
+			sqsManager.sendMessage(message, messageGroupId);
+	
+			logger.debug("Se envio el documento al SQS: SaleDocument: " + saleDocumentId);
+			logger.debug("ACTION: SEND");
 
-		logger.debug("Se envio el documento al SQS: SaleDocument: " + saleDocumentId);
+		}
+
 
 		return new ResponseEntity<SaleDocument>(saleDocument, HttpStatus.OK);
 

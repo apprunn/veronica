@@ -245,16 +245,15 @@ public abstract class GenericXMLSignature {
 			is.close();
 			
 			X509Certificate certificate = getFirstCertificate(storeManager);
-			if (certificate == null) {
+			if (certificate != null) {
 				return true;
 			}
-
-			return false;
 			
         } catch (Exception ex) {
 			ex.printStackTrace();
-            return false;
-        }
+		}
+		
+		return false;
         
 	}
 

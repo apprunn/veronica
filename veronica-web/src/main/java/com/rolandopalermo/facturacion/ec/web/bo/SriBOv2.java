@@ -159,9 +159,9 @@ public class SriBOv2 {
         RespuestaComprobante respuestaComprobante = sriBO.autorizarComprobante(saleDocument.getClaveAcceso(), wsdlAutorizacion);
         
         // 2. VALIDATE IF SALE DOCUMENT IS ALREADY AUTHORIZED
-        if (saleDocument.getSaleDocumentState() == SaleDocument.AUTORIZADO) {
-            return respuestaComprobante;
-        }
+        // if (saleDocument.getSaleDocumentState() == SaleDocument.AUTORIZADO) {
+        //     return respuestaComprobante;
+        // }
 
         // 3. READ SRI RESPONSE
         if (!respuestaComprobante.getAutorizaciones().getAutorizacion().isEmpty()) {
@@ -247,7 +247,7 @@ public class SriBOv2 {
         } else {
 
             if (onlyValidate) {
-                return null;
+                throw new NegocioException("NO ENVIADO AUN", SaleDocument.PENDIENTE);
             }
 
             // SEND ERROR MESSAGE TO EXTERNAL SALE DOCUMENT
