@@ -150,6 +150,10 @@ public class SriBOv2 {
     }
 
     public RespuestaComprobante autorizar(SaleDocument saleDocument, String wsdlAutorizacion, String urlBase) throws NegocioException, JAXBException, AmazonServiceException, IOException {
+        return autorizar(saleDocument, wsdlAutorizacion, urlBase, false);
+    }
+
+    public RespuestaComprobante autorizar(SaleDocument saleDocument, String wsdlAutorizacion, String urlBase, boolean onlyValidate) throws NegocioException, JAXBException, AmazonServiceException, IOException {
 
         // 1. REQUEST AUTHORIZATION STATUS TO SRI
         RespuestaComprobante respuestaComprobante = sriBO.autorizarComprobante(saleDocument.getClaveAcceso(), wsdlAutorizacion);
@@ -241,6 +245,10 @@ public class SriBOv2 {
 
             }
         } else {
+
+            if (onlyValidate) {
+                return null;
+            }
 
             // SEND ERROR MESSAGE TO EXTERNAL SALE DOCUMENT
             actualizarDocumentoSale(urlBase, saleDocument, 1, "DATA NO ENVIADA");

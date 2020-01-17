@@ -261,7 +261,8 @@ public class SQSManager {
                     if (saleDocument.getVersion() > 1) {
                         try {
                             
-                            autorizar(company, saleDocument);
+                            String wsdlAutorizacion = company.getFlagEnvironment() == 0 ? wsdlAuthorizationTest : wsdlAuthorizationProduction;
+                            sriBo.autorizar(saleDocument, wsdlAutorizacion, urlBase, true);
                             message.acknowledge();
                             return;
 
