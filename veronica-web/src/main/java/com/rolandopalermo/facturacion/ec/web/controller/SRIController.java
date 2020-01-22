@@ -14,6 +14,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.rolandopalermo.facturacion.ec.bo.SriBO;
@@ -61,9 +62,6 @@ public class SRIController {
 
 	@Value("${sri.wsdl.recepcion}")
 	private String wsdlRecepcion;
-
-	@Value("${sri.wsdl.autorizacion}")
-	private String wsdlAutorizacion;
 
 	@Value("${sales.ruta}")
 	private String baseURL;
@@ -149,8 +147,16 @@ public class SRIController {
 	@PostMapping(value = "/autorizar/", produces = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<RespuestaComprobante> autorizarComprobante(
 			@ApiParam(value = "Clave de acceso del comprobante electrónico", required = true) 
-			@RequestBody AutorizacionRequestDTO request) {
+			@RequestBody AutorizacionRequestDTO request,
+			@RequestParam(name = "environment", required = true) int environment) {
 		try {
+
+			if (environment != 1 && environment != 2) {
+				throw new NegocioException("Entorno de SRI invalido");
+			}
+
+			String wsdlAutorizacion = environment == 1 ? wsdlAuthorizationTest : wsdlAuthorizationProduction;
+
 			RespuestaComprobante respuestaComprobante = sriBO.autorizarComprobante(request.getClaveAcceso(), wsdlAutorizacion);
 			return new ResponseEntity<RespuestaComprobante>(
 				respuestaComprobante, HttpStatus.OK);
@@ -163,62 +169,62 @@ public class SRIController {
 		}
 	}
 
-	@ApiOperation(value = "Genera, firma, envía y autoriza una factura electrónica")
-	@PostMapping(value = "/emitir/factura", produces = MediaType.APPLICATION_JSON_VALUE)
-	public ResponseEntity<RespuestaComprobante> emitirFactura(
-			@Valid
-			@ApiParam(value = API_DOC_ANEXO_1, required = true) 
-			@RequestBody Factura request) {
-		return emitirDocumentoElectronico(request);
-	}
+	// @ApiOperation(value = "Genera, firma, envía y autoriza una factura electrónica")
+	// @PostMapping(value = "/emitir/factura", produces = MediaType.APPLICATION_JSON_VALUE)
+	// public ResponseEntity<RespuestaComprobante> emitirFactura(
+	// 		@Valid
+	// 		@ApiParam(value = API_DOC_ANEXO_1, required = true) 
+	// 		@RequestBody Factura request) {
+	// 	return emitirDocumentoElectronico(request);
+	// }
 
-	@ApiOperation(value = "Genera, firma, envía y autoriza una  guía de remisión")
-	@PostMapping(value = "/emitir/guia-remision", produces = MediaType.APPLICATION_JSON_VALUE)
-	public ResponseEntity<RespuestaComprobante> emitirGuiaRemision(
-			@Valid
-			@ApiParam(value = API_DOC_ANEXO_1, required = true) 
-			@RequestBody GuiaRemision request) {
-		return emitirDocumentoElectronico(request);
-	}
+	// @ApiOperation(value = "Genera, firma, envía y autoriza una  guía de remisión")
+	// @PostMapping(value = "/emitir/guia-remision", produces = MediaType.APPLICATION_JSON_VALUE)
+	// public ResponseEntity<RespuestaComprobante> emitirGuiaRemision(
+	// 		@Valid
+	// 		@ApiParam(value = API_DOC_ANEXO_1, required = true) 
+	// 		@RequestBody GuiaRemision request) {
+	// 	return emitirDocumentoElectronico(request);
+	// }
 
-	@ApiOperation(value = "Genera, firma, envía y autoriza una nota de crédito")
-	@PostMapping(value = "/emitir/nota-credito", produces = MediaType.APPLICATION_JSON_VALUE)
-	public ResponseEntity<RespuestaComprobante> emitirNotaCredito(
-			@Valid
-			@ApiParam(value = API_DOC_ANEXO_1, required = true) 
-			@RequestBody NotaCredito request) {
-		return emitirDocumentoElectronico(request);
-	}
+	// @ApiOperation(value = "Genera, firma, envía y autoriza una nota de crédito")
+	// @PostMapping(value = "/emitir/nota-credito", produces = MediaType.APPLICATION_JSON_VALUE)
+	// public ResponseEntity<RespuestaComprobante> emitirNotaCredito(
+	// 		@Valid
+	// 		@ApiParam(value = API_DOC_ANEXO_1, required = true) 
+	// 		@RequestBody NotaCredito request) {
+	// 	return emitirDocumentoElectronico(request);
+	// }
 
-	@ApiOperation(value = "Genera, firma, envía y autoriza una nota de débito")
-	@PostMapping(value = "/emitir/nota-debito", produces = MediaType.APPLICATION_JSON_VALUE)
-	public ResponseEntity<RespuestaComprobante> emitirNotaDebito(
-			@Valid
-			@ApiParam(value = API_DOC_ANEXO_1, required = true) 
-			@RequestBody NotaDebito request) {
-		return emitirDocumentoElectronico(request);
-	}
+	// @ApiOperation(value = "Genera, firma, envía y autoriza una nota de débito")
+	// @PostMapping(value = "/emitir/nota-debito", produces = MediaType.APPLICATION_JSON_VALUE)
+	// public ResponseEntity<RespuestaComprobante> emitirNotaDebito(
+	// 		@Valid
+	// 		@ApiParam(value = API_DOC_ANEXO_1, required = true) 
+	// 		@RequestBody NotaDebito request) {
+	// 	return emitirDocumentoElectronico(request);
+	// }
 
-	@ApiOperation(value = "Genera, firma, envía y autoriza un comprobante de retención")
-	@PostMapping(value = "/emitir/comprobante-retencion", produces = MediaType.APPLICATION_JSON_VALUE)
-	public ResponseEntity<RespuestaComprobante> emitirComprobanteRetencion(
-			@Valid
-			@ApiParam(value = API_DOC_ANEXO_1, required = true) 
-			@RequestBody ComprobanteRetencion request) {
-		return emitirDocumentoElectronico(request);
-	}
+	// @ApiOperation(value = "Genera, firma, envía y autoriza un comprobante de retención")
+	// @PostMapping(value = "/emitir/comprobante-retencion", produces = MediaType.APPLICATION_JSON_VALUE)
+	// public ResponseEntity<RespuestaComprobante> emitirComprobanteRetencion(
+	// 		@Valid
+	// 		@ApiParam(value = API_DOC_ANEXO_1, required = true) 
+	// 		@RequestBody ComprobanteRetencion request) {
+	// 	return emitirDocumentoElectronico(request);
+	// }
 
-	private ResponseEntity<RespuestaComprobante> emitirDocumentoElectronico(ComprobanteElectronico request) {
-		try {
-			return new ResponseEntity<RespuestaComprobante>(sriBO.emitirComprobante(request, rutaArchivoPkcs12,
-					claveArchivopkcs12, wsdlRecepcion, wsdlAutorizacion), HttpStatus.OK);
-		} catch (NegocioException e) {
-			logger.error("emitirDocumentoElectronico", e);
-			throw new BadRequestException(e.getMessage());
-		} catch (Exception e) {
-			logger.error("emitirDocumentoElectronico", e);
-			throw new InternalServerException(e.getMessage());
-		}
-	}
+	// private ResponseEntity<RespuestaComprobante> emitirDocumentoElectronico(ComprobanteElectronico request) {
+	// 	try {
+	// 		return new ResponseEntity<RespuestaComprobante>(sriBO.emitirComprobante(request, rutaArchivoPkcs12,
+	// 				claveArchivopkcs12, wsdlRecepcion, wsdlAutorizacion), HttpStatus.OK);
+	// 	} catch (NegocioException e) {
+	// 		logger.error("emitirDocumentoElectronico", e);
+	// 		throw new BadRequestException(e.getMessage());
+	// 	} catch (Exception e) {
+	// 		logger.error("emitirDocumentoElectronico", e);
+	// 		throw new InternalServerException(e.getMessage());
+	// 	}
+	// }
 
 }

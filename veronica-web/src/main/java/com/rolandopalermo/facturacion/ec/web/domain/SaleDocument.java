@@ -31,6 +31,7 @@ public class SaleDocument {
     public static final int AUTORIZADO = 3;
     public static final int INCORRECTO = 4;
     public static final int NO_AUTORIZADO = 5;
+    public static final int SINCRONIZADO = 6;
     
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
