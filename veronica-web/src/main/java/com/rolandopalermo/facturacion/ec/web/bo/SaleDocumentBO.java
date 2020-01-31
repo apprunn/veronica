@@ -111,8 +111,6 @@ public class SaleDocumentBO {
 
                 if (state == SaleDocument.AUTORIZADO) {
                     return result;
-                } else if (state == SaleDocument.ENVIADO) {
-                    throw new NegocioException("Existe un comprobante preparado para autorizar");
                 }
 
                 saleDocument = result;

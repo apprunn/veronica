@@ -48,7 +48,7 @@ import java.util.Map;
 @Api(description = "Genera comprobante electrónico como XML, firma XML y encola envio de comprobante a la SRI")
 public class RegistroComprobanteController {
 
-	private static final Logger logger = Logger.getLogger(GeneracionController.class);
+	private static final Logger logger = Logger.getLogger(RegistroComprobanteController.class);
 
 	@Autowired
 	private GeneradorBO generadorBO;
@@ -74,6 +74,9 @@ public class RegistroComprobanteController {
 			@RequestParam int saleDocumentId) {
 		
 		logger.debug("Factura: SaleDocument - " + saleDocumentId);
+		logger.debug("Factura: RUC:" + request.getInfoTributaria().getRuc());
+		logger.debug("Factura: RUC:" + request.getInfoTributaria().getRazonSocial());
+
 		return generarDocumentoElectronico(request, saleDocumentId, "FAC");
 	}
 

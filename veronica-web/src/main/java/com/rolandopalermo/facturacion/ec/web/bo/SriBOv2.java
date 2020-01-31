@@ -49,10 +49,6 @@ public class SriBOv2 {
 
         // 1. VALIDATE IF SALE DOCUMENT STATE IS RIGHT
         switch (saleDocument.getSaleDocumentState()) {
-            case SaleDocument.INCORRECTO:
-            throw new NegocioException("El documento es incorrecto, subir uno nuevo", SaleDocument.INCORRECTO);
-            case SaleDocument.ENVIADO:
-            throw new NegocioException("El documento ya fue enviado", SaleDocument.ENVIADO);
             case SaleDocument.AUTORIZADO:
             throw new NegocioException("El documento ya fue autorizado", SaleDocument.AUTORIZADO);
         }
@@ -84,9 +80,10 @@ public class SriBOv2 {
             // 4.3 UPDATE SALE DOCUMENT IN EXTERNAL SERVER
             actualizarDocumentoSale(urlBase, saleDocument, 5, mensaje + "\n" + aditional);
 
-            logger.error(saleDocument.getSaleDocumentId());
+            logger.error("Document Name: #" + saleDocument.getSaleDocumentId());
             logger.error(mensaje);
             logger.error(aditional);
+            logger.error("StateID: " + saleDocument.getSaleDocumentState());
 
             // 4.4 THROW EXCEPTION TO UP
             throw new NegocioException(message, SaleDocument.INCORRECTO);
@@ -203,7 +200,9 @@ public class SriBOv2 {
 
 				SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 				formatter.setTimeZone(calendar.getTimeZone());
-				String dateString = formatter.format(calendar.getTime());
+                String dateString = formatter.format(calendar.getTime());
+                
+                saleDocumentBO.updateSaleDocument(saleDocument);
 
                 // UPDATE EXTERNAL SALE DOCUMENT
                 actualizarDocumentoSale(
@@ -236,6 +235,8 @@ public class SriBOv2 {
                 actualizarDocumentoSale(urlBase, saleDocument, 8, strMessage);
                 saleDocument.setSaleDocumentState(SaleDocument.NO_AUTORIZADO);
 
+                saleDocumentBO.updateSaleDocument(saleDocument);
+
                 logger.error(saleDocument.getSaleDocumentId());
                 logger.error(strMessage);
 
@@ -254,6 +255,8 @@ public class SriBOv2 {
             actualizarDocumentoSale(urlBase, saleDocument, 1, "DATA NO ENVIADA");
             saleDocument.setSaleDocumentState(SaleDocument.INCORRECTO);
 
+            saleDocumentBO.updateSaleDocument(saleDocument);
+
             logger.error(saleDocument.getSaleDocumentId());
             logger.error("NO DATA");
 
@@ -261,8 +264,6 @@ public class SriBOv2 {
             throw new NegocioException("NO_DATA", SaleDocument.INCORRECTO);
         }
 
-        // 4. UPDATE SALE DOCUMENT
-        saleDocumentBO.updateSaleDocument(saleDocument);
 
         return respuestaComprobante;
     }
@@ -408,15 +409,23 @@ public class SriBOv2 {
                             .execute();
 
             if (response.isSuccessful()) {
-                System.out.println("SALE ACTUALIZADO");
+                logger.debug("SaleDocument #" + saleDocumentId + " was updated");
             } else {
+
+                String errorString = "";
+
+                if (response.errorBody() != null) {
+                    errorString = response.errorBody().string();
+                }
+
+                logger.error("SaleDocument #" + saleDocumentId + " " + response.code() + " : " + errorString);
                 throw new NegocioException("No se conecto con el servidor");
             }
 
         } catch (IOException e) {
-            logger.error(e.getMessage());
+            logger.error("SaleDocument #" + saleDocumentId + " -> " + e.getMessage());
         } catch (Exception e) {
-            logger.error(e.getMessage());
+            logger.error("SaleDocument #" + saleDocumentId + " -> " + e.getMessage());
         }
 	}
 
