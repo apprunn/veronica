@@ -24,8 +24,8 @@ import lombok.Setter;
 @Getter
 @Setter
 @XmlType(propOrder = { "fechaEmision", "dirEstablecimiento", "contribuyenteEspecial", "obligadoContabilidad",
-		"tipoIdentificacionComprador", "guiaRemision", "razonSocialComprador", "identificacionComprador",
-		"totalSinImpuestos", "totalDescuento", "totalImpuesto", "propina", "importeTotal", "moneda", "pago",
+		"tipoIdentificacionComprador", "guiaRemision", "razonSocialComprador", "identificacionComprador", "direccionComprador",
+		"totalSinImpuestos", "totalSubsidio", "totalDescuento", "totalImpuesto", "propina", "importeTotal", "moneda", "pago",
 		"valorRetIva", "valorRetRenta" })
 public class InfoFactura {
 
@@ -41,8 +41,10 @@ public class InfoFactura {
 	@NotEmpty
 	protected String razonSocialComprador;
 	protected String identificacionComprador;
+	protected String direccionComprador;
 	@NotNull
 	protected BigDecimal totalSinImpuestos;
+	protected BigDecimal totalSubsidio;
 	protected BigDecimal totalDescuento;
 	@NotEmpty
 	@Valid

@@ -27,7 +27,7 @@ import lombok.Setter;
 @Getter
 @Setter
 @XmlRootElement(name = "detalle")
-@XmlType(propOrder = { "codigoPrincipal", "codigoAuxiliar", "descripcion", "cantidad", "precioUnitario", "descuento",
+@XmlType(propOrder = { "codigoPrincipal", "codigoAuxiliar", "descripcion", "cantidad", "precioUnitario", "precioSinSubsidio", "descuento",
 		"precioTotalSinImpuesto", "detAdicional", "impuesto" })
 public class FacturaDetalle {
 
@@ -37,6 +37,7 @@ public class FacturaDetalle {
 	protected String descripcion;
 	protected BigDecimal cantidad;
 	protected BigDecimal precioUnitario;
+	protected BigDecimal precioSinSubsidio;
 	protected BigDecimal descuento;
 	protected BigDecimal precioTotalSinImpuesto;
 	private List<DetAdicional> detAdicional;

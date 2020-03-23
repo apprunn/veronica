@@ -1,10 +1,6 @@
 package com.rolandopalermo.facturacion.ec.web.controller;
 
-import static com.rolandopalermo.facturacion.ec.common.util.Constantes.API_DOC_ANEXO_1;
-
 import java.io.File;
-import javax.validation.Valid;
-
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -24,12 +20,6 @@ import com.rolandopalermo.facturacion.ec.common.exception.NegocioException;
 import com.rolandopalermo.facturacion.ec.common.exception.ResourceNotFoundException;
 import com.rolandopalermo.facturacion.ec.dto.AutorizacionRequestDTO;
 import com.rolandopalermo.facturacion.ec.dto.RecepcionRequestDTO;
-import com.rolandopalermo.facturacion.ec.modelo.ComprobanteElectronico;
-import com.rolandopalermo.facturacion.ec.modelo.factura.Factura;
-import com.rolandopalermo.facturacion.ec.modelo.guia.GuiaRemision;
-import com.rolandopalermo.facturacion.ec.modelo.notacredito.NotaCredito;
-import com.rolandopalermo.facturacion.ec.modelo.notadebito.NotaDebito;
-import com.rolandopalermo.facturacion.ec.modelo.retencion.ComprobanteRetencion;
 import com.rolandopalermo.facturacion.ec.web.bo.SaleDocumentBO;
 import autorizacion.ws.sri.gob.ec.RespuestaComprobante;
 import io.swagger.annotations.Api;

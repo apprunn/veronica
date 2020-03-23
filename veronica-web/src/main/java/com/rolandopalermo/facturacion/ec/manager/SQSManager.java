@@ -314,19 +314,19 @@ public class SQSManager {
 
             } catch (NegocioException e) {
 
-                logger.error(e.getStackTrace());
+                logger.error(e.getMessage());
 
                 if (e.getCode() == SaleDocument.INCORRECTO) {
                     // X.1. ACTUALIZAR ESTADO DE DOCUMENTO FALLIDO
                     try {
                         message.acknowledge();
                     } catch (JMSException e1) {
-                        e1.printStackTrace();
+                        logger.error(e1.getMessage());
                     }
                 }
 
             } catch (Exception e) {
-                e.printStackTrace();
+                logger.error(e.getMessage());
                 logger.error("EL DOCUMENTO NO LLEGO A SU DESTINO");
             }
 
