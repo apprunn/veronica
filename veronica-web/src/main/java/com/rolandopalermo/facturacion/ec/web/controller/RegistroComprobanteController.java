@@ -25,6 +25,7 @@ import com.rolandopalermo.facturacion.ec.manager.SQSManager;
 import com.rolandopalermo.facturacion.ec.modelo.ComprobanteElectronico;
 import com.rolandopalermo.facturacion.ec.modelo.factura.Factura;
 import com.rolandopalermo.facturacion.ec.modelo.guia.GuiaRemision;
+import com.rolandopalermo.facturacion.ec.modelo.liquidacion.Liquidacion;
 import com.rolandopalermo.facturacion.ec.modelo.notacredito.NotaCredito;
 import com.rolandopalermo.facturacion.ec.modelo.notadebito.NotaDebito;
 import com.rolandopalermo.facturacion.ec.modelo.retencion.ComprobanteRetencion;
@@ -127,6 +128,16 @@ public class RegistroComprobanteController {
 
 		logger.debug("Comprobante de remision: SaleDocument - " + saleDocumentId);
 		return generarDocumentoElectronico(request, saleDocumentId, "CRT");
+	}
+
+	@ApiOperation(value = "Genera y firmar una liquidacion de compra en formato XML")
+	@PostMapping(value = "/comprobante-liquidacion", produces = MediaType.APPLICATION_JSON_VALUE)
+	public ResponseEntity<SaleDocument> generarLiquidacion(
+			@Valid
+			@ApiParam(value = API_DOC_ANEXO_1, required = true) 
+			@RequestBody Liquidacion request,
+			@RequestParam int saleDocumentId) {
+		return generarDocumentoElectronico(request, saleDocumentId, "LQC");
 	}
 
 	private ResponseEntity<SaleDocument> generarDocumentoElectronico(ComprobanteElectronico request, int saleDocumentId, String documentCode) {

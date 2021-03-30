@@ -89,6 +89,7 @@ public class SQSManager {
     }
  
     private void initialize() {
+        
         ProfileCredentialsProvider credentialsProvider = new ProfileCredentialsProvider();
 
 		try {

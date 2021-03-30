@@ -23,6 +23,7 @@ import com.rolandopalermo.facturacion.ec.dto.GenericResponse;
 import com.rolandopalermo.facturacion.ec.modelo.ComprobanteElectronico;
 import com.rolandopalermo.facturacion.ec.modelo.factura.Factura;
 import com.rolandopalermo.facturacion.ec.modelo.guia.GuiaRemision;
+import com.rolandopalermo.facturacion.ec.modelo.liquidacion.Liquidacion;
 import com.rolandopalermo.facturacion.ec.modelo.notacredito.NotaCredito;
 import com.rolandopalermo.facturacion.ec.modelo.notadebito.NotaDebito;
 import com.rolandopalermo.facturacion.ec.modelo.retencion.ComprobanteRetencion;
@@ -103,13 +104,29 @@ public class GeneracionController {
 		return generarDocumentoElectronico(request, saleDocumentId, "CRT");
 	}
 
+	@ApiOperation(value = "Genera y firmar una liquidacion de compra en formato XML")
+	@PostMapping(value = "/comprobante-liquidacion", produces = MediaType.APPLICATION_JSON_VALUE)
+	public ResponseEntity<GenericResponse<byte[]>> generarLiquidacion(
+			@Valid
+			@ApiParam(value = API_DOC_ANEXO_1, required = true) 
+			@RequestBody Liquidacion request,
+			@RequestParam int saleDocumentId) {
+		return generarDocumentoElectronico(request, saleDocumentId, "LQC");
+	}
+
 	private ResponseEntity<GenericResponse<byte[]>> generarDocumentoElectronico(ComprobanteElectronico request, int saleDocumentId, String documentCode) {
 		try {
 			byte[] content = generadorBO.generarXMLDocumentoElectronico(request);
 
 			Company company = companyBO.getCompany(request.getInfoTributaria().getRuc());
 
-			byte[] signedContent = firmarComprobanteElectronico(content, company);
+			byte[] signedContent;
+
+			if (company == null) {
+				signedContent = content;
+			} else {
+				signedContent = firmarComprobanteElectronico(content, company);
+			}
 
 			// SaleDocument saleDocument = saleDocumentBO.saveSaleDocument(company, request.getInfoTributaria().getClaveAcceso(), saleDocumentId, documentCode, signedContent);
 
